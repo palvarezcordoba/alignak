@@ -4,9 +4,9 @@ services:
   # Alignak daemons
   # - arbiter
   arbiter-master:
-    image: alignak/alignak:0.0.1
+    image: ${DOCKER_REPOSITORY}/${DOCKER_ALIGNAK_DAEMON}:${DOCKER_TAG}
     build:
-      context: image-alignak
+      context: ./image-alignak
       args:
         ALIGNAK_SHARE_DIR: /alignak
     env_file:
@@ -21,7 +21,7 @@ services:
 
   # - scheduler(s)
   scheduler-master:
-    image: alignak/alignak:0.0.1
+    image: ${DOCKER_REPOSITORY}/${DOCKER_ALIGNAK_DAEMON}:${DOCKER_TAG}
     env_file:
       - .env
     networks:
@@ -33,7 +33,7 @@ services:
     command: "alignak-scheduler -e ${ALIGNAK_CONFIGURATION_FILE} -n scheduler-master"
 
   scheduler-north:
-    image: alignak/alignak:0.0.1
+    image: ${DOCKER_REPOSITORY}/${DOCKER_ALIGNAK_DAEMON}:${DOCKER_TAG}
     env_file:
       - .env
     networks:
@@ -45,7 +45,7 @@ services:
     command: "alignak-scheduler -e ${ALIGNAK_CONFIGURATION_FILE} -n scheduler-north"
 
   scheduler-south:
-    image: alignak/alignak:0.0.1
+    image: ${DOCKER_REPOSITORY}/${DOCKER_ALIGNAK_DAEMON}:${DOCKER_TAG}
     env_file:
       - .env
     networks:
@@ -58,7 +58,7 @@ services:
 
   # - reactionner
   reactionner-master:
-    image: alignak/alignak:0.0.1
+    image: ${DOCKER_REPOSITORY}/${DOCKER_ALIGNAK_DAEMON}:${DOCKER_TAG}
     env_file:
       - .env
     networks:
@@ -71,7 +71,7 @@ services:
 
   # - poller
   poller-master:
-    image: alignak/alignak:0.0.1
+    image: ${DOCKER_REPOSITORY}/${DOCKER_ALIGNAK_DAEMON}:${DOCKER_TAG}
     env_file:
       - .env
     networks:
@@ -84,9 +84,9 @@ services:
 
   # - broker
   broker-master:
-    image: alignak/alignak-ui:0.0.1
+    image: ${DOCKER_REPOSITORY}/${DOCKER_ALIGNAK_WEBUI}:${DOCKER_TAG}
     build:
-      context: ./image-alignak-ui
+      context: image-alignak-ui
       args:
         ALIGNAK_SHARE_DIR: /alignak
     env_file:
@@ -99,11 +99,12 @@ services:
       - "17767:17767"
     volumes:
       - ${ALIGNAK_DATADIR}:/alignak
+#      - ${ALIGNAK_DATADIR}/webui:/usr/local/lib/python3.6/site-packages/alignak_module_webui
 #    command: "alignak-broker -e ${ALIGNAK_CONFIGURATION_FILE} -n broker-master"
 
   # - receiver
   receiver-master:
-    image: alignak/alignak:0.0.1
+    image: ${DOCKER_REPOSITORY}/${DOCKER_ALIGNAK_DAEMON}:${DOCKER_TAG}
     env_file:
       - .env
     networks:

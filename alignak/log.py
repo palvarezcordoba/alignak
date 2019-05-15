@@ -44,6 +44,7 @@ import time
 import datetime
 import logging
 from logging import Handler, Formatter, StreamHandler
+from logging.handlers import TimedRotatingFileHandler
 from logging.config import dictConfig as logger_dictConfig
 
 from termcolor import cprint
@@ -196,6 +197,30 @@ def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_f
 
         # Configure the logger, any error will raise an exception
         logger_dictConfig(config)
+
+
+def set_log_file(file_name, log_level=logging.INFO):
+    """Set the Alignak daemons logger have a file log handler.
+
+    :param file_name: file name
+
+    :param log_level: log level
+    :return: n/a
+    """
+    # Change the logger and all its handlers log level
+    logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+    logger_.setLevel(log_level)
+
+    for handler in logger_.handlers:
+        if isinstance(handler, TimedRotatingFileHandler):
+            # We still have a file logger
+            break
+    else:
+        # Adding a console logger...
+        fh = ColorStreamHandler(sys.stdout)
+        fh.setFormatter(Formatter('[%(asctime)s] %(levelname)s: [%(name)s] %(message)s',
+                                  "%Y-%m-%d %H:%M:%S"))
+        logger_.addHandler(fh)
 
 
 def set_log_console(log_level=logging.INFO):

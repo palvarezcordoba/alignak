@@ -1,10 +1,12 @@
 FROM python:3.6
 
-MAINTAINER Frédéric Mohier
+LABEL maintainer="Frédéric Mohier (frederic.mohier@alignak.net)"
+
+LABEL alignak.image_type="Generic"
 
 ENV DEBIAN_FRONTEND noninteractive
 
-# Fix container timezone
+# Force container timezone
 RUN ln -fs /usr/share/zoneinfo/Europe/Paris /etc/localtime && \
     dpkg-reconfigure -f noninteractive tzdata
 
@@ -42,26 +44,14 @@ ARG ALIGNAK_SHARE_ID=1024
 RUN groupadd --system --gid $ALIGNAK_SHARE_ID $ALIGNAK_GROUP
 RUN useradd --system $ALIGNAK_USER --uid $ALIGNAK_SHARE_ID --gid $ALIGNAK_SHARE_ID
 
-# Create a share directory
+# Create a share directory and set proper credentials
 ARG ALIGNAK_SHARE_DIR=/alignak
 RUN mkdir -p $ALIGNAK_SHARE_DIR
-
-## Create a configuration directory
-#ARG ALIGNAK_ETC_DIR=/alignak/etc
-#RUN mkdir -p $ALIGNAK_ETC_DIR
-#
-## Create a log directory
-#ARG ALIGNAK_LOG_DIR=/alignak/log
-#RUN mkdir -p $ALIGNAK_LOG_DIR
-#
-## Create a working directory
-#ARG ALIGNAK_RUN_DIR=/alignak/run
-#RUN mkdir -p $ALIGNAK_RUN_DIR
-
-RUN chown -R $ALIGNAK_USER:$ALIGNAK_GROUP $ALIGNAK_SHARE_DIR
+RUN chown $ALIGNAK_USER:$ALIGNAK_GROUP $ALIGNAK_SHARE_DIR
 RUN chmod -R 775 $ALIGNAK_SHARE_DIR
 
+# Run as the newly created user
 #USER $ALIGNAK_USER
 
-# Run the arbiter in check mode for the configuration in the Alignak directory
+# Default is to run the Alignak arbiter in check mode for the default shipped configuration
 CMD ["alignak-arbiter", "-V", "-e", "/repos/alignak/etc/alignak.ini" ]

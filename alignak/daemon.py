@@ -295,7 +295,7 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
 
         # File for logger configuration
         'logger_configuration':
-            StringProp(default=u'./alignak-logger.json'),
+            StringProp(default=u'./alignak-logger.test'),
         # Override log file name - default is to not override
         'log_filename':
             StringProp(default=u''),
@@ -596,6 +596,7 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
                                % (self.user, self.group), exit_code=3)
 
         # Alignak logger configuration file
+        print("Daemon '%s' logger configuration file: %s" % (self.name, self.logger_configuration))
         if os.getenv('ALIGNAK_LOGGER_CONFIGURATION', None):
             self.logger_configuration = os.getenv('ALIGNAK_LOGGER_CONFIGURATION', None)
         if self.logger_configuration != os.path.abspath(self.logger_configuration):
