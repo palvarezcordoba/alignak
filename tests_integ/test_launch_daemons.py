@@ -439,7 +439,7 @@ class TestLaunchDaemons(AlignakTest):
 
     def test_arbiter_parameters_log(self):
         """ Run the Alignak Arbiter with some parameters - log file name
-
+        Log file name and log level may be specified on the command line
         :return:
         """
         # All the default configuration files are in /tmp/etc
@@ -448,7 +448,8 @@ class TestLaunchDaemons(AlignakTest):
             os.remove('/tmp/arbiter.log')
 
         args = ["../alignak/bin/alignak_arbiter.py", "-e", '%s/etc/alignak.ini' % self.cfg_folder,
-                "-V", "-vv", "--log_file", "/tmp/arbiter.log"]
+                "-V", "-vv",
+                "--log_level", "INFO", "--log_file", "/tmp/arbiter.log"]
         ret = self._run_command_with_timeout(args, 20)
 
         # Log file created because of the -V option
@@ -540,39 +541,45 @@ class TestLaunchDaemons(AlignakTest):
 
     def test_arbiter_normal(self):
         """ Running the Alignak Arbiter - normal verbosity
-
+        Expects log at the WARNING level - depends upon the logger configuration file
         :return:
         """
         self._arbiter(verbosity=None)
 
     def test_arbiter_verbose(self):
         """ Running the Alignak Arbiter - normal verbosity
-
+        Expects log at the INFO level
         :return:
         """
         self._arbiter(verbosity='--verbose')
+
+    def test_arbiter_verbose2(self):
         self._arbiter(verbosity='-v')
 
     def test_arbiter_very_verbose(self):
-        """ Running the Alignak Arbiter - normal verbosity
-
+        """ Running the Alignak Arbiter - very verbose
+        Expects log at the DEBUG level
         :return:
         """
         self._arbiter(verbosity='--debug')
-        # Execute only once, because it looks too verbose for Travis :/
-        # self._arbiter(verbosity='-vv')
 
-    def _arbiter(self, verbosity=None):
+    def test_arbiter_very_verbose2(self):
+        self._arbiter(verbosity='-vv')
+
+    def _arbiter(self, verbosity=None, log_file=None):
         """ Running the Alignak Arbiter with a specific verbosity
 
         :return:
         """
         # Set a specific logger configuration - do not use the default test configuration
         # to use the default shipped configuration
-        os.environ['ALIGNAK_LOGGER_CONFIGURATION'] = './etc/warning_alignak-logger.json'
+        os.environ['ALIGNAK_LOGGER_CONFIGURATION'] = \
+            os.path.abspath('./etc/warning_alignak-logger.json')
+        print("Logger configuration file is: %s" % os.environ['ALIGNAK_LOGGER_CONFIGURATION'])
 
         print("Launching arbiter ...")
-        args = ["../alignak/bin/alignak_arbiter.py", "-n", "arbiter-master", "-e", '%s/etc/alignak.ini' % self.cfg_folder]
+        args = ["../alignak/bin/alignak_arbiter.py",
+                "-n", "arbiter-master", "-e", '%s/etc/alignak.ini' % self.cfg_folder]
         if verbosity:
             args.append(verbosity)
         arbiter = subprocess.Popen(args)

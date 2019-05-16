@@ -306,9 +306,9 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         'log_rotation_when':
             StringProp(default='midnight'),
         'log_rotation_interval':
-            IntegerProp(default='1'),
+            IntegerProp(default=1),
         'log_rotation_count':
-            IntegerProp(default='7'),
+            IntegerProp(default=7),
         'log_format':
             StringProp(default='[%(asctime)s] %(levelname)s: [%(name)s] %(message)s'),
         'log_date':
@@ -1045,7 +1045,7 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
 
             # Maybe someone said we will stop...
             if self.will_stop and not self.type == 'arbiter':
-                logger.debug("death-wait mode... waiting for death")
+                logger.info("death-wait mode... waiting for death")
                 _, _ = self.make_a_pause(1.0)
                 continue
 

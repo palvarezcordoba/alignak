@@ -75,7 +75,7 @@ from collections import deque
 import psutil
 
 
-from alignak.log import make_monitoring_log, set_log_level, set_log_console
+from alignak.log import make_monitoring_log, set_monitoring_logger, set_log_level, set_log_console
 from alignak.misc.common import SIGNALS_TO_NAMES_DICT
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.objects.config import Config
@@ -452,11 +452,25 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
                         setattr(self.conf, key, entry.pythonize(value))
                     else:
                         setattr(self.conf, key, value)
-                    logger.debug("- setting '%s' as %s", key, getattr(self.conf, key))
+                    logger.debug("- setting '%s' as %s - %s",
+                                 key, type(key), getattr(self.conf, key))
                 logger.info("Got Alignak global configuration")
 
         self.alignak_name = getattr(self.conf, "alignak_name", self.name)
         logger.info("Configuration for Alignak: %s", self.alignak_name)
+
+        # Configure the global monitoring events logger
+        if self.conf.log_filename != os.path.abspath(self.conf.log_filename):
+            if self.conf.log_filename:
+                self.conf.log_filename = os.path.abspath(os.path.join(
+                    self.logdir, self.conf.log_filename))
+        if self.conf.log_filename:
+            set_monitoring_logger(self.conf.log_filename, self.conf.log_rotation_when,
+                                  self.conf.log_rotation_interval, self.conf.log_rotation_count,
+                                  self.conf.log_format, self.conf.log_date)
+            print("Configured a monitoring events logger: %s" % self.conf.log_filename)
+        else:
+            self.exit_on_error(message="No monitoring events log configured!", exit_code=2)
 
         if macros:
             self.conf.load_params(macros)
