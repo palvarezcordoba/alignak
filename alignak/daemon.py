@@ -197,7 +197,7 @@ except ImportError as exp:  # pragma: no cover, not for unit tests...
         """
         return []
 
-from alignak.log import setup_logger, set_log_level
+from alignak.log import setup_logger, set_log_file, set_log_level
 from alignak.http.daemon import HTTPDaemon, PortNotFree
 from alignak.stats import statsmgr
 from alignak.modulesmanager import ModulesManager
@@ -242,13 +242,13 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
             StringProp(),
         # Alignak main configuration file
         'env_filename':
-            StringProp(default=u''),
+            StringProp(default=''),
 
         'log_loop':         # Set True to log the daemon loop activity
             BoolProp(default=False),
 
         'pid_filename':
-            StringProp(default=u''),
+            StringProp(default=''),
 
         # Daemon directories
         'etcdir':   # /usr/local/etc/alignak
@@ -288,20 +288,32 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         'server_key':
             StringProp(default=u'etc/certs/server.key'),
         'ca_cert':
-            StringProp(default=u''),
+            StringProp(default=''),
         # Not used currently
         'server_dh':
-            StringProp(default=u''),
+            StringProp(default=''),
 
         # File for logger configuration
         'logger_configuration':
-            StringProp(default=u'./alignak-logger.json'),
+            StringProp(default=''),
         # Override log file name - default is to not override
         'log_filename':
-            StringProp(default=u''),
+            StringProp(default=''),
         # Override log level - default is to not change anything
         'log_level':
-            StringProp(default=u''),
+            StringProp(default=''),
+
+        'log_rotation_when':
+            StringProp(default='midnight'),
+        'log_rotation_interval':
+            IntegerProp(default='1'),
+        'log_rotation_count':
+            IntegerProp(default='7'),
+        'log_format':
+            StringProp(default='[%(asctime)s] %(levelname)s: [%(name)s] %(message)s'),
+        'log_date':
+            StringProp(default='%Y-%m-%d %H:%M:%S'),
+
         # Set True to include cherrypy logs in the daemon log file
         'log_cherrypy':
             BoolProp(default=False),
@@ -343,13 +355,13 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         # Alignak will report its status to its monitor
         # Interface is the same as the Alignak WS module PATCH/host
         'alignak_monitor':
-            StringProp(default=u''),
+            StringProp(default=''),
         'alignak_monitor_period':
             IntegerProp(default=60),
         'alignak_monitor_username':
-            StringProp(default=u''),
+            StringProp(default=''),
         'alignak_monitor_password':
-            StringProp(default=u''),
+            StringProp(default=''),
 
         # Local statsd daemon for collecting daemon metrics
         'statsd_host':
@@ -598,13 +610,19 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         # Alignak logger configuration file
         if os.getenv('ALIGNAK_LOGGER_CONFIGURATION', None):
             self.logger_configuration = os.getenv('ALIGNAK_LOGGER_CONFIGURATION', None)
-        if self.logger_configuration != os.path.abspath(self.logger_configuration):
-            if self.logger_configuration == './alignak-logger.json':
-                self.logger_configuration = os.path.join(os.path.dirname(self.env_filename),
-                                                         self.logger_configuration)
-            else:
-                self.logger_configuration = os.path.abspath(self.logger_configuration)
-        print("Daemon '%s' logger configuration file: %s" % (self.name, self.logger_configuration))
+        if self.logger_configuration:
+            if self.logger_configuration != os.path.abspath(self.logger_configuration):
+                if self.logger_configuration == './alignak-logger.json':
+                    self.logger_configuration = os.path.join(os.path.dirname(self.env_filename),
+                                                             self.logger_configuration)
+                else:
+                    self.logger_configuration = os.path.abspath(self.logger_configuration)
+
+            if not os.path.exists(self.logger_configuration):
+                self.exit_on_error("Configured logger configuration file (%s) does not exist."
+                                   % self.logger_configuration, exit_code=3)
+            print("Daemon '%s' logger configuration file: %s"
+                  % (self.name, self.logger_configuration))
 
         # # Make my paths properties be absolute paths
         # for prop, entry in list(my_properties.items()):
@@ -629,9 +647,10 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
                 self.logdir = os.path.dirname(self.log_filename)
             print("Daemon '%s' is started with an overridden log file: %s"
                   % (self.name, self.log_filename))
+        print("Daemon '%s' log file: %s" % (self.name, self.log_filename))
 
         # Check the log directory (and create if it does not exist)
-        self.check_dir(os.path.dirname(self.log_filename))
+        # self.check_dir(os.path.dirname(self.log_filename))
 
         # Specific monitoring log directory
         # self.check_dir(os.path.join(os.path.dirname(self.log_filename), 'monitoring-log'))
@@ -644,7 +663,7 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
                       % (self.name, self.log_cherrypy))
             else:
                 self.log_cherrypy = None
-            self.log_filename = ''
+            # self.log_filename = ''
 
         # Log level...
         if 'log_level' in kwargs and kwargs['log_level']:
@@ -2168,11 +2187,20 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         """
         # Configure the daemon logger
         try:
-            # Make sure that the log directory is existing
-            self.check_dir(self.logdir)
-            setup_logger(logger_configuration_file=self.logger_configuration,
-                         log_dir=self.logdir, process_name=self.name,
-                         log_file=self.log_filename)
+            if not self.logger_configuration:
+                # Make sure that the log directory is existing
+                self.check_dir(self.logdir)
+
+                # Configure a timed rotation file logger
+                set_log_file(self.log_filename, self.log_rotation_when,
+                             self.log_rotation_interval, self.log_rotation_count,
+                             self.log_format, self.log_date)
+            else:
+                # Configure the logger with a configuration file
+                setup_logger(logger_configuration_file=self.logger_configuration,
+                             log_dir=self.logdir, process_name=self.name,
+                             log_file=self.log_filename)
+
             if self.debug:
                 # Force the global logger at DEBUG level
                 set_log_level('DEBUG')

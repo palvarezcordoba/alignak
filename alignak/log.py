@@ -44,6 +44,7 @@ import time
 import datetime
 import logging
 from logging import Handler, Formatter, StreamHandler
+from logging.handlers import TimedRotatingFileHandler
 from logging.config import dictConfig as logger_dictConfig
 
 from termcolor import cprint
@@ -159,10 +160,6 @@ def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_f
                 #     print("- handler : %s (%s)" % (hdlr, hdlr.formatter._fmt))
             break
     else:
-        if not logger_configuration_file or not os.path.exists(logger_configuration_file):
-            print("The logger configuration file does not exist: %s" % logger_configuration_file)
-            return
-
         with open(logger_configuration_file, 'rt') as _file:
             config = json.load(_file)
             truncate = False
@@ -196,6 +193,36 @@ def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_f
 
         # Configure the logger, any error will raise an exception
         logger_dictConfig(config)
+
+
+def set_log_file(log_filename, log_rotation_when, log_rotation_interval, log_rotation_count,
+                 log_format, log_date):
+    """Set the Alignak daemons logger have a file log handler.
+
+    :param log_filename: file name
+
+    :param log_rotation_count:
+    :param log_rotation_interval:
+    :param log_rotation_when:
+    :param log_format:
+    :param log_date:
+
+    :return: n/a
+    """
+    print("Daemon log file: %s" % (log_filename))
+    logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+
+    for handler in logger_.handlers:
+        if isinstance(handler, TimedRotatingFileHandler):
+            # We still have a file logger
+            break
+    else:
+        file_handler = TimedRotatingFileHandler(
+            log_filename, when=log_rotation_when,
+            interval=log_rotation_interval, backupCount=log_rotation_count)
+        file_handler.setFormatter(Formatter(log_format, log_date))
+        logger_.addHandler(file_handler)
+        logger_.debug("Logger (default), added a TimedRotatingFileHandler")
 
 
 def set_log_console(log_level=logging.INFO):
