@@ -391,7 +391,7 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
             # Force adding a console handler to the Alignak logger
             set_log_console(logging.INFO if not self.debug else logging.DEBUG)
             # Force the global logger at INFO level
-            set_log_level(logging.INFO if not self.debug else logging.DEBUG)
+            set_log_level(logging.INFO if not self.debug else logging.DEBUG, handlers=True)
             logger.info("-----")
             logger.info("Arbiter is in configuration check mode")
             logger.info("Arbiter log level got increased to a minimum of INFO")

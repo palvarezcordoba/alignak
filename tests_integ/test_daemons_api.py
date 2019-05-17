@@ -571,7 +571,7 @@ class TestDaemonsApi(AlignakTest):
             print("%s, raw: %s" % (name, raw_data.content))
             data = raw_data.json()
             print("%s, log level: %s" % (name, data))
-            # Initially forced the INFO log level
+            # Initially forced the ERROR log level (no logger configuration file)
             assert data['log_level'] == 20
             assert data['log_level_name'] == 'INFO'
 

@@ -174,7 +174,7 @@ class template_Daemon_Start():
         print("Starting daemon: %s" % daemon.name)
         # daemon.load_modules_manager()
         # daemon.do_load_modules([])
-        daemon.do_daemon_init_and_start(set_proc_title=False)
+        daemon.do_daemon_init_and_start(set_process_title=False)
         print("Started: %s" % daemon.name)
 
     def stop_daemon(self, daemon):

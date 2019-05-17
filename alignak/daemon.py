@@ -507,7 +507,7 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
                                          "No defined configuration for the daemon: %s. "
                                          % self.name))
 
-                    # todo: why doing this? It is quite tricky to configure daemon if it  does not
+                    # todo: why doing this? It is quite tricky to configure daemon if it does not
                     # have its own configuration section, perhaps removing this should be fine!
                     # self.pre_log.append(("DEBUG",
                     #                      "No defined configuration for the daemon: %s. "
@@ -631,6 +631,7 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         #         setattr(self, prop, os.path.abspath(getattr(self, prop)))
 
         # Log file...
+        print("Daemon '%s' log dir: %s" % (self.name, self.logdir))
         self.log_filename = PathProp().pythonize("%s.log" % self.name)
         self.log_filename = os.path.abspath(os.path.join(self.logdir, self.log_filename))
         if 'log_filename' in kwargs and kwargs['log_filename']:
@@ -869,10 +870,6 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
             self.http_thread.join(timeout=3)
             if self.http_thread.is_alive():  # pragma: no cover, should never happen...
                 logger.warning("HTTP thread did not terminated. Force stopping the thread..")
-                # try:
-                #     self.http_thread._Thread__stop()  # pylint: disable=E1101
-                # except Exception as exp:  # pylint: disable=broad-except
-                #     print("Exception: %s" % exp)
             else:
                 logger.debug("HTTP thread exited")
             self.http_thread = None
@@ -1484,18 +1481,18 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         manager.start()
         return manager
 
-    def do_daemon_init_and_start(self, set_proc_title=True):
+    def do_daemon_init_and_start(self, set_process_title=True):
         """Main daemon function.
         Clean, allocates, initializes and starts all necessary resources to go in daemon mode.
 
         The set_proc_title parameter is mainly useful for the Alignak unit tests.
         This to avoid changing the test process name!
 
-        :param set_proc_title: if set (default), the process title is changed to the daemon name
-        :type set_proc_title: bool
+        :param set_process_title: if set (default), the process title is changed to the daemon name
+        :type set_process_title: bool
         :return: False if the HTTP daemon can not be initialized, else True
         """
-        if set_proc_title:
+        if set_process_title:
             self.set_proctitle(self.name)
 
         # Change to configured user/group account
@@ -1516,22 +1513,6 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
             # Else, I set my own pid as the reference one
             self.write_pid(os.getpid())
 
-        # # TODO: check if really necessary!
-        # # -------
-        # # Set ownership on some default log files. It may happen that these default
-        # # files are owned by a privileged user account
-        # try:
-        #     for log_file in ['alignak.log', 'alignak-events.log']:
-        #         if os.path.exists('/tmp/%s' % log_file):
-        #             with open('/tmp/%s' % log_file, "w") as file_log_file:
-        #                 os.fchown(file_log_file.fileno(), self.uid, self.gid)
-        #         if os.path.exists('/tmp/monitoring-log/%s' % log_file):
-        #             with open('/tmp/monitoring-log/%s' % log_file, "w") as file_log_file:
-        #                 os.fchown(file_log_file.fileno(), self.uid, self.gid)
-        # except Exception as exp:  # pylint: disable=broad-except
-        #     #  pragma: no cover
-        #     print("Could not set default log files ownership, exception: %s" % str(exp))
-
         # Configure the daemon logger
         self.setup_alignak_logger()
 
@@ -1540,18 +1521,17 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
             logger.error("I could not setup my communication daemon :(")
             return False
 
-        # Creating synchonisation manager (inter-daemon queues...)
+        # Creating synchronisation manager (inter-daemon queues...)
         self.sync_manager = self._create_manager()
 
         # Start the CherryPy server through a detached thread
         logger.info("Starting http_daemon thread")
-        # pylint: disable=bad-thread-instantiation
         self.http_thread = threading.Thread(target=self.http_daemon_thread,
                                             name='%s-http_thread' % self.name)
-        # Setting the thread as a daemon allows to Ctrl+C to kill the main daemon
+        # Setting the thread as a daemon allows to kill the thread with the main daemon
         self.http_thread.daemon = True
         self.http_thread.start()
-        # time.sleep(1)
+
         logger.info("HTTP daemon thread started")
 
         return True
@@ -1593,7 +1573,6 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
                 logger.info("Enabling hard SSL server name verification")
 
         # Let's create the HTTPDaemon, it will be started later
-        # pylint: disable=E1101
         try:
             logger.info('Setting up HTTP daemon (%s:%d), %d threads',
                         self.host, self.port, self.thread_pool_size)
@@ -1666,6 +1645,9 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         if hasattr(os, 'initgroups'):
             try:
                 os.initgroups(self.user, gid)
+            except PermissionError:
+                logger.info("The current user (%s) is not allowed to initialize "
+                            "the groups access list for '%s'", get_cur_user(), self.user)
             except OSError as err:
                 logger.warning('Cannot call the additional groups setting with initgroups: %s',
                                err.strerror)
@@ -2203,19 +2185,19 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
 
             if self.debug:
                 # Force the global logger at DEBUG level
-                set_log_level('DEBUG')
+                set_log_level('DEBUG', handlers=True)
                 logger.info("-----")
                 logger.info("Daemon log level set to a minimum of DEBUG")
                 logger.info("-----")
             elif self.verbose:
                 # Force the global logger at INFO level
-                set_log_level('INFO')
+                set_log_level('INFO', handlers=True)
                 logger.info("-----")
                 logger.info("Daemon log level set to a minimum of INFO")
                 logger.info("-----")
             elif self.log_level:
                 # Force the global logger at provided level
-                set_log_level(self.log_level)
+                set_log_level(self.log_level, handlers=True)
                 logger.info("-----")
                 logger.info("Daemon log level set to %s", self.log_level)
                 logger.info("-----")
@@ -2238,10 +2220,4 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
             for level, message in self.pre_log:
                 fun_level = level.lower()
                 getattr(logger, fun_level)("- %s", message)
-                # if level.lower() == "debug":
-                #     logger.debug(message)
-                # elif level.lower() == "info":
-                #     logger.info(message)
-                # elif level.lower() == "warning":
-                #     logger.warning(message)
             logger.debug("--- Stop - Log prior to our configuration")
