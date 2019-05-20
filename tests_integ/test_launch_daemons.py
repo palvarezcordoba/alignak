@@ -336,7 +336,8 @@ class TestLaunchDaemons(AlignakTest):
         ok = False
         with open('/tmp/alignak/log/arbiter-master.log') as f:
             for line in f:
-                if 'ERROR:' in line and "*** One or more problems were encountered while processing the configuration (first check)..." in line:
+                if 'ERROR:' in line and "*** One or more problems were encountered while " \
+                                        "processing the configuration (first check)..." in line:
                     ok = True
                 if 'ERROR:' in line or 'CRITICAL:' in line:
                     print("*** %s" % line.rstrip())
@@ -357,7 +358,9 @@ class TestLaunchDaemons(AlignakTest):
         if os.path.exists('%s/my-arbiter-name.log' % self._launch_dir):
             os.remove('%s/my-arbiter-name.log' % self._launch_dir)
 
-        args = ["../alignak/bin/alignak_arbiter.py", "-e", '%s/etc/alignak.ini' % self.cfg_folder, "-n", "my-arbiter-name"]
+        args = ["../alignak/bin/alignak_arbiter.py",
+                "-e", '%s/etc/alignak.ini' % self.cfg_folder,
+                "-n", "my-arbiter-name"]
         ret = self._run_command_with_timeout(args, 20)
 
         errors = 0
