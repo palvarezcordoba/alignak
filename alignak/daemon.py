@@ -295,7 +295,7 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
 
         # File for logger configuration
         'logger_configuration':
-            StringProp(default=''),
+            StringProp(default='DEFAULT'),
         # Override log file name - default is to not override
         'log_filename':
             StringProp(default=''),
@@ -611,44 +611,51 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         if os.getenv('ALIGNAK_LOGGER_CONFIGURATION', None):
             self.logger_configuration = os.getenv('ALIGNAK_LOGGER_CONFIGURATION', None)
         if self.logger_configuration:
+            if self.logger_configuration in ['DEFAULT']:
+                self.logger_configuration = os.path.join(self.etcdir, 'alignak-logger.json')
+
             if self.logger_configuration != os.path.abspath(self.logger_configuration):
-                if self.logger_configuration == './alignak-logger.json':
+                if self.logger_configuration in ['./alignak-logger.json', 'alignak-logger.json']:
                     self.logger_configuration = os.path.join(os.path.dirname(self.env_filename),
                                                              self.logger_configuration)
                 else:
                     self.logger_configuration = os.path.abspath(self.logger_configuration)
 
-            if not os.path.exists(self.logger_configuration):
-                self.exit_on_error("Configured logger configuration file (%s) does not exist."
-                                   % self.logger_configuration, exit_code=3)
-            print("Daemon '%s' logger configuration file: %s"
-                  % (self.name, self.logger_configuration))
-
-        # # Make my paths properties be absolute paths
-        # for prop, entry in list(my_properties.items()):
-        #     # Set absolute paths for
-        #     if isinstance(my_properties[prop], PathProp):
-        #         setattr(self, prop, os.path.abspath(getattr(self, prop)))
-
         # Log file...
-        print("Daemon '%s' log dir: %s" % (self.name, self.logdir))
         self.log_filename = PathProp().pythonize("%s.log" % self.name)
         self.log_filename = os.path.abspath(os.path.join(self.logdir, self.log_filename))
         if 'log_filename' in kwargs and kwargs['log_filename']:
             self.log_filename = PathProp().pythonize(kwargs['log_filename'].strip())
+
+            # If we received a directory, transform to a file
+            if os.path.isdir(self.log_filename):
+                self.log_filename = os.path.abspath(
+                    os.path.join(self.log_filename, "%s.log" % self.name))
+
             # Make it an absolute path file in the log directory
             if self.log_filename != os.path.abspath(self.log_filename):
                 if self.log_filename:
+                    self.logger_configuration = None
                     self.log_filename = os.path.abspath(os.path.join(self.logdir,
                                                                      self.log_filename))
                 else:
                     self.use_log_file = False
                     print("Daemon '%s' will not log to a file: %s" % (self.name))
             else:
+                self.logger_configuration = None
                 self.logdir = os.path.dirname(self.log_filename)
-            print("Daemon '%s' is started with an overridden log file: %s"
-                  % (self.name, self.log_filename))
-        print("Daemon '%s' log file: %s" % (self.name, self.log_filename))
+            # print("Daemon '%s' is started with an overridden log file: %s"
+            #       % (self.name, self.log_filename))
+
+        if self.logger_configuration:
+            if not os.path.exists(self.logger_configuration):
+                print("Daemon '%s', configured logger configuration file (%s) does not exist."
+                      % (self.name, self.logger_configuration))
+            else:
+                print("Daemon '%s' logger configuration file: %s"
+                      % (self.name, self.logger_configuration))
+        else:
+            print("Daemon '%s' log file: %s" % (self.name, self.log_filename))
 
         # Check the log directory (and create if it does not exist)
         # self.check_dir(os.path.dirname(self.log_filename))
@@ -676,11 +683,16 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         self.pid_filename = os.path.abspath(os.path.join(self.workdir, self.pid_filename))
         if 'pid_filename' in kwargs and kwargs['pid_filename']:
             self.pid_filename = PathProp().pythonize(kwargs['pid_filename'].strip())
+
+            # If we received a directory, transform to a file
+            if os.path.isdir(self.pid_filename):
+                self.pid_filename = os.path.abspath(
+                    os.path.join(self.pid_filename, "%s.pid" % self.name))
+
             # Make it an absolute path file in the pid directory
             if self.pid_filename != os.path.abspath(self.pid_filename):
                 self.pid_filename = os.path.abspath(os.path.join(self.workdir, self.pid_filename))
             self.workdir = os.path.dirname(self.pid_filename)
-            print("Daemon working directory: %s" % self.workdir)
         print("Daemon '%s' pid file: %s" % (self.name, self.pid_filename))
         self.pre_log.append(("INFO",
                              "Daemon '%s' pid file: %s" % (self.name, self.pid_filename)))
@@ -1645,12 +1657,13 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         if hasattr(os, 'initgroups'):
             try:
                 os.initgroups(self.user, gid)
-            except PermissionError:
-                logger.info("The current user (%s) is not allowed to initialize "
-                            "the groups access list for '%s'", get_cur_user(), self.user)
             except OSError as err:
-                logger.warning('Cannot call the additional groups setting with initgroups: %s',
-                               err.strerror)
+                if err.errno == errno.EPERM:
+                    logger.info("The current user (%s) is not allowed to initialize "
+                                "the groups access list for '%s'", get_cur_user(), self.user)
+                else:
+                    logger.warning('Cannot call the additional groups setting with initgroups: %s',
+                                   err.strerror)
         elif hasattr(os, 'setgroups'):  # pragma: no cover, not with unit tests on Travis
             # Else try to call the setgroups if it exists...
             groups = [gid] + \
@@ -2169,10 +2182,10 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         """
         # Configure the daemon logger
         try:
-            if not self.logger_configuration:
-                # Make sure that the log directory is existing
-                self.check_dir(self.logdir)
+            # Make sure that the log directory is existing
+            self.check_dir(self.logdir)
 
+            if not self.logger_configuration:
                 # Configure a timed rotation file logger
                 set_log_file(self.log_filename, self.log_rotation_when,
                              self.log_rotation_interval, self.log_rotation_count,

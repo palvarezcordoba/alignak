@@ -123,6 +123,7 @@ class TestLaunchDaemons(AlignakTest):
         # Arbiter process must exit with a return code == 2
         assert ret == 2
 
+    # @pytest.mark.skip("To be re-activated with spare mode")
     def test_arbiter_class_no_environment(self):
         """ Instantiate the Alignak Arbiter class without environment file
 
@@ -135,8 +136,10 @@ class TestLaunchDaemons(AlignakTest):
             'env_file': '',
             'alignak_name': 'alignak-test',
             'daemon_name': 'arbiter-master',
+            'log_filename': '/tmp/arbiter.log',
             'legacy_cfg_files': ['../etc/alignak.cfg']
         }
+        # Exception because the logger configuration file does not exist
         self.arbiter = Arbiter(**args)
 
         print("Arbiter: %s" % (self.arbiter))
@@ -379,11 +382,14 @@ class TestLaunchDaemons(AlignakTest):
         :return:
         """
         # Set a specific logger configuration - do not use the default test configuration
-        # to use the default shipped configuration
-        os.environ['ALIGNAK_LOGGER_CONFIGURATION'] = './etc/warning_alignak-logger.json'
+        os.environ['ALIGNAK_LOGGER_CONFIGURATION'] = \
+            os.path.abspath('./etc/warning_alignak-logger.json')
+        print("Logger configuration file is: %s" % os.environ['ALIGNAK_LOGGER_CONFIGURATION'])
 
         print("Launching arbiter in verification mode...")
-        args = ["../alignak/bin/alignak_arbiter.py", "-e", '%s/etc/alignak.ini' % self.cfg_folder, "-V"]
+        args = ["../alignak/bin/alignak_arbiter.py",
+                "-e", '%s/etc/alignak.ini' % self.cfg_folder,
+                "-V"]
         ret = self._run_command_with_timeout(args, 20)
 
         errors = 0

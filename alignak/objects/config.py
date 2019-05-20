@@ -791,7 +791,7 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
             IntegerProp(default=5, fill_brok=[FULL_STATUS]),
 
         'daemons_stop_timeout':
-            IntegerProp(default=5, fill_brok=[FULL_STATUS]),
+            IntegerProp(default=10, fill_brok=[FULL_STATUS]),
     }
 
     macros = {
