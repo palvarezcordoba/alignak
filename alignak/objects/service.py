@@ -364,7 +364,7 @@ class Service(SchedulingItem):
         :return: service full name
         :rtype: str
         """
-        if self.is_tpl():
+        if self.is_a_template():
             return "tpl-%s/%s" % (getattr(self, 'host_name', 'XxX'), self.name)
         if hasattr(self, 'host_name') and hasattr(self, 'service_description'):
             return "%s/%s" % (self.host_name, self.service_description)
@@ -504,7 +504,7 @@ class Service(SchedulingItem):
                 continue
             new_s = self.copy()
             new_s.host_name = host.get_name()
-            if self.is_tpl():  # if template, the new one is not
+            if self.is_a_template():  # if template, the new one is not
                 new_s.register = 1
             for key in key_value:
                 if key == 'KEY':
@@ -1307,39 +1307,39 @@ class Services(SchedulingItems):
     name_property = 'unique_key'  # only used by (un)indexitem (via 'name_property')
     inner_class = Service  # use for know what is in items
 
-    def add_template(self, tpl):
+    def add_template(self, template):
         """
         Adds and index a template into the `templates` container.
 
         This implementation takes into account that a service has two naming
         attribute: `host_name` and `service_description`.
 
-        :param tpl: The template to add
-        :type tpl:
+        :param template: The template to add
+        :type template:
         :return: None
         """
         objcls = self.inner_class.my_type
-        name = getattr(tpl, 'name', '')
-        sdesc = getattr(tpl, 'service_description', '')
-        hname = getattr(tpl, 'host_name', '')
+        name = getattr(template, 'name', '')
+        sdesc = getattr(template, 'service_description', '')
+        hname = getattr(template, 'host_name', '')
         logger.debug("Adding a %s template: host_name: %s, name: %s, service_description: %s",
                      objcls, hname, name, sdesc)
         if not name and not hname:
             msg = "a %s template has been defined without name nor host_name. from: %s" \
-                  % (objcls, tpl.imported_from)
-            tpl.add_error(msg)
+                  % (objcls, template.imported_from)
+            template.add_error(msg)
         elif not name and not sdesc:
             msg = "a %s template has been defined without name nor service_description. from: %s" \
-                  % (objcls, tpl.imported_from)
-            tpl.add_error(msg)
+                  % (objcls, template.imported_from)
+            template.add_error(msg)
         elif not name:
             # If name is not defined, use the host_name_service_description as name (fix #791)
-            setattr(tpl, 'name', "%s_%s" % (hname, sdesc))
-            tpl = self.index_template(tpl)
+            setattr(template, 'name', "%s_%s" % (hname, sdesc))
+            template = self.index_template(template)
         elif name:
-            tpl = self.index_template(tpl)
-        self.templates[tpl.uuid] = tpl
-        logger.debug('\tAdded service template #%d %s', len(self.templates), tpl)
+            template = self.index_template(template)
+        self.templates[template.uuid] = template
+        logger.debug('\tAdded service template #%d %s', len(self.templates), template)
 
     def apply_inheritance(self):
         """ For all items and templates inherit properties and custom

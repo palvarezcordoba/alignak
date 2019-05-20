@@ -217,7 +217,7 @@ class Contact(Item):
         :return: contact name
         :rtype: str
         """
-        if self.is_tpl():
+        if self.is_a_template():
             return "tpl-%s" % (getattr(self, 'name', 'unnamed'))
         return getattr(self, 'contact_name', 'unnamed')
 

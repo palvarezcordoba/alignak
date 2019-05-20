@@ -365,7 +365,7 @@ class Host(SchedulingItem):  # pylint: disable=too-many-public-methods
         :return: The name of the host
         :rtype: str
         """
-        if not self.is_tpl():
+        if not self.is_a_template():
             try:
                 return self.host_name
             except AttributeError:  # outch, no hostname
@@ -382,7 +382,7 @@ class Host(SchedulingItem):  # pylint: disable=too-many-public-methods
         :return: host_name
         :rtype: str
         """
-        if self.is_tpl():
+        if self.is_a_template():
             return "tpl-%s" % (self.name)
         return getattr(self, 'host_name', 'unnamed')
 
@@ -459,7 +459,7 @@ class Host(SchedulingItem):  # pylint: disable=too-many-public-methods
         :rtype: bool
         """
         return self.is_excluded_for_sdesc(
-            getattr(service, 'service_description', None), service.is_tpl()
+            getattr(service, 'service_description', None), service.is_a_template()
         )
 
     def is_excluded_for_sdesc(self, sdesc, is_tpl=False):

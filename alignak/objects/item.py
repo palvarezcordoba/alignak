@@ -159,6 +159,10 @@ class Item(AlignakObject):
         # The new Alignak object unique identifier is set by the base AlignakObject class...
         logger.debug("New %s: %s", self.__class__.my_type, self.uuid)
 
+        self.conf_is_correct = None
+        self.configuration_warnings = []
+        self.configuration_errors = []
+
         # For custom variables
         if not hasattr(self, 'customs'):
             self.customs = {}
@@ -279,9 +283,10 @@ class Item(AlignakObject):
         # The custom variables
         if hasattr(self, "customs"):
             copied_item.customs = copy(self.customs)
-        # And tags/templates
+        # The tags
         if hasattr(self, "tags"):
             copied_item.tags = copy(self.tags)
+        # The templates
         if hasattr(self, "templates"):
             copied_item.templates = copy(self.templates)
 
@@ -316,7 +321,23 @@ class Item(AlignakObject):
         """
         return getattr(self, 'name', "unknown")
 
-    def is_tpl(self):
+    def _get_name(self):
+        """Get the name of the object
+
+        :return: the object name string
+        :rtype: str
+        """
+        return self.get_name()
+
+    def get_full_name(self):
+        """Accessor to name attribute
+
+        :return: name
+        :rtype: str
+        """
+        return getattr(self, 'name', 'unnamed')
+
+    def is_a_template(self):
         """
         Check if this object is a template
 
@@ -462,8 +483,8 @@ class Item(AlignakObject):
         Check if this object is correct
 
         This function:
-        - checks if the required properties are defined, ignoring special_properties if some exist
-        - logs the previously found warnings and errors
+        - ignores the special_properties if some exist
+        - checks if the required properties are defined,
 
         :return: True if it's correct, otherwise False
         :rtype: bool
@@ -475,8 +496,8 @@ class Item(AlignakObject):
             if hasattr(self, 'special_properties') and prop in getattr(self, 'special_properties'):
                 continue
             if not hasattr(self, prop) and entry.required:
-                msg = "[%s::%s] %s property is missing" % (self.my_type, self.get_name(), prop)
-                self.add_error(msg)
+                self.add_error("[%s::%s] %s property is missing"
+                               % (self.my_type, self.get_name(), prop))
 
         state = state & self.conf_is_correct
         return state
@@ -484,8 +505,9 @@ class Item(AlignakObject):
     def old_properties_names_to_new(self):
         """
         This function is used by service and hosts to transform Nagios2 parameters to Nagios3
-        ones, like normal_check_interval to check_interval. There is a old_parameters tab
-        in Classes that give such modifications to do.
+        ones, like normal_check_interval to check_interval.
+
+        There is a old_parameters tab in Classes that need such modifications.
 
         :return: None
         """
@@ -498,27 +520,27 @@ class Item(AlignakObject):
                 setattr(self, new_name, value)
                 delattr(self, old_name)
 
-    def get_raw_import_values(self):  # pragma: no cover, never used
-        """
-        Get properties => values of this object
-
-        TODO: never called anywhere, still useful?
-
-        :return: dictionary of properties => values
-        :rtype: dict
-        """
-        res = {}
-        properties = list(self.__class__.properties.keys())
-        # Register is not by default in the properties
-        if 'register' not in properties:
-            properties.append('register')
-
-        for prop in properties:
-            if hasattr(self, prop):
-                val = getattr(self, prop)
-                res[prop] = val
-        return res
-
+    # def get_raw_import_values(self):  # pragma: no cover, deprecation
+    #     """
+    #     Get properties => values of this object
+    #
+    #     TODO: never called anywhere, still useful?
+    #
+    #     :return: dictionary of properties => values
+    #     :rtype: dict
+    #     """
+    #     res = {}
+    #     properties = list(self.__class__.properties.keys())
+    #     # Register is not by default in the properties
+    #     if 'register' not in properties:
+    #         properties.append('register')
+    #
+    #     for prop in properties:
+    #         if hasattr(self, prop):
+    #             val = getattr(self, prop)
+    #             res[prop] = val
+    #     return res
+    #
     def add_downtime(self, downtime):
         """
         Add a downtime in this object
@@ -690,42 +712,26 @@ class Item(AlignakObject):
         self.fill_data_brok_from(data, CHECK_RESULT)
         return Brok({'type': self.my_type + '_snapshot', 'data': data})
 
-    def dump(self, dump_file_name=None):  # pragma: no cover, never called
-        # pylint: disable=unused-argument
-        """
-        Dump Item object properties
-
-        :return: dictionary with properties
-        :rtype: dict
-        """
-        dump = {}
-        for prop in self.properties:
-            if not hasattr(self, prop):
-                continue
-            attr = getattr(self, prop)
-            if isinstance(attr, list) and attr and isinstance(attr[0], Item):
-                dump[prop] = [i.dump() for i in attr]
-            elif isinstance(attr, Item):
-                dump[prop] = attr.dump()
-            elif attr:
-                dump[prop] = getattr(self, prop)
-        return dump
-
-    def _get_name(self):
-        """Get the name of the object
-
-        :return: the object name string
-        :rtype: str
-        """
-        return self.get_name()
-
-    def get_full_name(self):
-        """Accessor to name attribute
-
-        :return: name
-        :rtype: str
-        """
-        return getattr(self, 'name', 'unnamed')
+    # def dump(self, dump_file_name=None):  # pragma: no cover, never called
+    #     # pylint: disable=unused-argument
+    #     """
+    #     Dump Item object properties
+    #
+    #     :return: dictionary with properties
+    #     :rtype: dict
+    #     """
+    #     dump = {}
+    #     for prop in self.properties:
+    #         if not hasattr(self, prop):
+    #             continue
+    #         attr = getattr(self, prop)
+    #         if isinstance(attr, list) and attr and isinstance(attr[0], Item):
+    #             dump[prop] = [i.dump() for i in attr]
+    #         elif isinstance(attr, Item):
+    #             dump[prop] = attr.dump()
+    #         elif attr:
+    #             dump[prop] = getattr(self, prop)
+    #     return dump
 
 
 class Items(object):
@@ -738,13 +744,16 @@ class Items(object):
     def __init__(self, items, index_items=True, parsing=True):
         self.items = {}
         self.name_to_item = {}
+
         self.templates = {}
         self.name_to_template = {}
+
+        self.conf_is_correct = None
         self.configuration_warnings = []
         self.configuration_errors = []
 
-        # We are un-serializing
         if isinstance(items, dict):
+            # We are un-serializing
             for item in list(items.values()):
                 self.add_item(self.inner_class(item, parsing=parsing))
         else:
@@ -816,7 +825,7 @@ class Items(object):
 
     def add_items(self, items, index_items):
         """
-        Add items to template if is template, else add in item list
+        Add items to the templates list if it is a template, else add in the items list
 
         :param items: items list to add
         :type items: alignak.objects.item.Items
@@ -828,7 +837,7 @@ class Items(object):
         count_items = 0
         generated_items = []
         for item in items:
-            if item.is_tpl():
+            if item.is_a_template():
                 self.add_template(item)
                 count_templates = count_templates + 1
             else:
@@ -846,7 +855,7 @@ class Items(object):
         Checks if an object holding the same name already exists in the index.
 
         If so, it compares their definition order: the lowest definition order
-        is kept. If definition order equal, an error is risen.Item
+        is kept. If definition order equals, an error is risen.
 
         The method returns the item that should be added after it has decided
         which one should be kept.
@@ -861,21 +870,18 @@ class Items(object):
         :return: 'item' parameter modified
         :rtype: object
         """
-        if item.is_tpl():
+        if item.is_a_template():
             existing = self.name_to_template[name]
         else:
             existing = self.name_to_item[name]
         if existing == item:
             return item
 
-        existing_prio = getattr(
-            existing,
-            "definition_order",
+        existing_prio = getattr(existing, "definition_order",
             existing.properties["definition_order"].default)
-        item_prio = getattr(
-            item,
-            "definition_order",
+        item_prio = getattr(item, "definition_order",
             item.properties["definition_order"].default)
+
         if existing_prio < item_prio:
             # Existing item has lower priority, so it has precedence.
             return existing
@@ -890,67 +896,67 @@ class Items(object):
                    "You may manually set the definition_order parameter to avoid this message." \
                    % (objcls, name, item.imported_from, existing.imported_from)
             item.configuration_warnings.append(mesg)
-        if item.is_tpl():
+        if item.is_a_template():
             self.remove_template(existing)
         else:
             self.remove_item(existing)
         return item
 
-    def add_template(self, tpl):
+    def add_template(self, template):
         """
         Add and index a template into the `templates` container.
 
-        :param tpl: The template to add
-        :type tpl: alignak.objects.item.Item
+        :param template: The template to add
+        :type template: alignak.objects.item.Item
         :return: None
         """
-        tpl = self.index_template(tpl)
-        self.templates[tpl.uuid] = tpl
+        template = self.index_template(template)
+        self.templates[template.uuid] = template
 
-    def index_template(self, tpl):
+    def index_template(self, template):
         """
         Indexes a template by `name` into the `name_to_template` dictionary.
 
-        :param tpl: The template to index
-        :type tpl: alignak.objects.item.Item
+        :param template: The template to index
+        :type template: alignak.objects.item.Item
         :return: None
         """
         objcls = self.inner_class.my_type
-        name = getattr(tpl, 'name', '')
+        name = getattr(template, 'name', '')
         if not name:
-            mesg = "a %s template has been defined without name, from: %s" % \
-                   (objcls, tpl.imported_from)
-            tpl.add_error(mesg)
+            template.add_error("a %s template has been defined without name, from: %s"
+                               % (objcls, template.imported_from))
         elif name in self.name_to_template:
-            tpl = self.manage_conflict(tpl, name)
-        self.name_to_template[name] = tpl
-        logger.debug("Indexed a %s template: %s, uses: %s",
-                     tpl.my_type, name, getattr(tpl, 'use', 'Nothing'))
-        return tpl
+            template = self.manage_conflict(template, name)
 
-    def remove_template(self, tpl):
+        self.name_to_template[name] = template
+        logger.debug("Indexed a %s template: %s, uses: %s",
+                     template.my_type, name, getattr(template, 'use', 'Nothing'))
+        return template
+
+    def remove_template(self, template):
         """
         Removes and un-index a template from the `templates` container.
 
-        :param tpl: The template to remove
-        :type tpl: alignak.objects.item.Item
+        :param template: The template to remove
+        :type template: alignak.objects.item.Item
         :return: None
         """
         try:
-            del self.templates[tpl.uuid]
+            del self.templates[template.uuid]
         except KeyError:  # pragma: no cover, simple protection
             pass
-        self.unindex_template(tpl)
+        self.unindex_template(template)
 
-    def unindex_template(self, tpl):
+    def unindex_template(self, template):
         """
         Unindex a template from the `templates` container.
 
-        :param tpl: The template to un-index
-        :type tpl: alignak.objects.item.Item
+        :param template: The template to un-index
+        :type template: alignak.objects.item.Item
         :return: None
         """
-        name = getattr(tpl, 'name', '')
+        name = getattr(template, 'name', '')
         try:
             del self.name_to_template[name]
         except KeyError:  # pragma: no cover, simple protection
@@ -1079,7 +1085,7 @@ class Items(object):
             return
         self.name_to_item.pop(name, None)
 
-    def find_by_name(self, name):
+    def find_by_name(self, name, template=False):
         """
         Find an item by name
 
@@ -1088,6 +1094,9 @@ class Items(object):
         :return: item
         :rtype: alignak.objects.item.Item
         """
+        if template:
+            return self.name_to_template.get(name, None)
+
         return self.name_to_item.get(name, None)
 
     def old_properties_names_to_new(self):  # pragma: no cover, never called
@@ -1101,20 +1110,23 @@ class Items(object):
                                  iter(list(self.templates.values()))):
             i.old_properties_names_to_new()
 
-    def find_tpl_by_name(self, name):
-        """
-        Find template by name
-
-        :param name: name of template
-        :type name: str
-        :return: name of template found
-        :rtype: str | None
-        """
-        return self.name_to_template.get(name, None)
-
+    # def find_template_by_name(self, name):
+    #     """
+    #     Find template by name
+    #
+    #     :param name: name of template
+    #     :type name: str
+    #     :return: name of template found
+    #     :rtype: str | None
+    #     """
+    #     return self.name_to_template.get(name, None)
+    #
     def get_all_tags(self, item):
         """
-        Get all tags of an item
+        Recursively get all tags of an item.
+
+        The list of tags is the list of the names of the templates
+        which the item is inheriting from.
 
         :param item: an item
         :type item: Item
@@ -1137,22 +1149,23 @@ class Items(object):
         :type item: alignak.objects.item.Item
         :return: None
         """
-        tpls = []
-        tpl_names = item.get_templates()
+        templates = []
 
-        for name in tpl_names:
-            template = self.find_tpl_by_name(name)
+        for name in item.get_templates():
+            template = self.find_by_name(name, template=True)
             if not template:
                 # TODO: Check if this should not be better to report as an error ?
                 self.add_warning("%s %s use/inherit from an unknown template: %s ! from: %s"
                                  % (type(item).__name__, item.get_name(), name, item.imported_from))
-            else:
-                if template is item:
-                    self.add_error("%s %s use/inherits from itself ! from: %s"
-                                   % (type(item).__name__, item._get_name(), item.imported_from))
-                else:
-                    tpls.append(template.uuid)
-        item.templates = tpls
+                continue
+
+            if template is item:
+                self.add_error("%s %s use/inherits from itself ! from: %s"
+                               % (type(item).__name__, item._get_name(), item.imported_from))
+                continue
+
+            templates.append(template.uuid)
+        item.templates = templates
 
     def linkify_templates(self):
         """
@@ -1402,20 +1415,20 @@ class Items(object):
             return
 
         # TODO : See if we can remove this if
-        cgnames = ''
+        cg_names = ''
         if item.contact_groups:
             if isinstance(item.contact_groups, list):
-                cgnames = item.contact_groups
+                cg_names = item.contact_groups
             else:
-                cgnames = item.contact_groups.split(',')
-        cgnames = strip_and_uniq(cgnames)
-        for cgname in cgnames:
-            contactgroup = contactgroups.find_by_name(cgname)
-            if not contactgroup:
-                item.add_error("The contact group '%s' defined on the %s '%s' do not exist"
-                               % (cgname, item.__class__.my_type, item.get_name()))
+                cg_names = item.contact_groups.split(',')
+        cg_names = strip_and_uniq(cg_names)
+
+        for cg_name in cg_names:
+            if not contactgroups.find_by_name(cg_name):
+                item.add_error("The contact group '%s' defined for the %s '%s' do not exist"
+                               % (cg_name, item.__class__.my_type, item.get_name()))
                 continue
-            cnames = contactgroups.get_members_of_group(cgname)
+            cnames = contactgroups.get_members_of_group(cg_name)
             # We add contacts into our contacts
             if cnames:
                 if hasattr(item, 'contacts'):
@@ -1501,27 +1514,6 @@ class Items(object):
                                 "'%s' is unknown!" % (i.__class__.my_type, i.get_name(), name))
 
             i.macromodulations = new
-
-    def linkify_s_by_module(self, modules):
-        """
-        Link modules to items
-
-        :param modules: Modules object (list of all the modules found in the configuration)
-        :type modules: alignak.objects.module.Modules
-        :return: None
-        """
-        for i in self:
-
-            links_list = strip_and_uniq(i.modules)
-            new = []
-            for name in [e for e in links_list if e]:
-                module = modules.find_by_name(name)
-                if module is not None and module.uuid not in new:
-                    new.append(module)
-                else:
-                    i.add_error("Error: the module %s is unknown for %s" % (name, i.get_name()))
-
-            i.modules = new
 
     @staticmethod
     def evaluate_hostgroup_expression(expr, hosts, hostgroups, look_in='hostgroups'):
@@ -1723,7 +1715,7 @@ class Items(object):
                     value = [value]
                 value.insert(0, obj.get_plus_and_delete(prop))
                 value = list(set(value))
-                if obj.is_tpl():
+                if obj.is_a_template():
                     value.insert(0, '+')
 
             # Clean the returned value
@@ -1734,7 +1726,7 @@ class Items(object):
                     if elt not in new_list:
                         new_list.append(elt)
                 value = new_list
-                if not obj.is_tpl():
+                if not obj.is_a_template():
                     while '+' in value:
                         value.remove('+')
             return value
@@ -1754,7 +1746,7 @@ class Items(object):
             still_loop = False
             if isinstance(value, list) and value[0] == '+':
                 # Templates should keep their + inherited from their parents
-                if not obj.is_tpl():
+                if not obj.is_a_template():
                     value = list(value)
                     value = value[1:]
                 still_loop = True
@@ -1781,7 +1773,7 @@ class Items(object):
                     if elt not in new_list:
                         new_list.append(elt)
                 value = new_list
-                if not obj.is_tpl():
+                if not obj.is_a_template():
                     while '+' in value:
                         value.remove('+')
 
@@ -1796,7 +1788,7 @@ class Items(object):
                     value = list(value)
                     value.extend(obj.get_plus_and_delete(prop))
                     # Template should keep their '+'
-                    if obj.is_tpl() and value[0] != '+':
+                    if obj.is_a_template() and value[0] != '+':
                         value.insert(0, '+')
 
                     # Clean the returned value
@@ -1807,7 +1799,7 @@ class Items(object):
                             if elt not in new_list:
                                 new_list.append(elt)
                         value = new_list
-                        if not obj.is_tpl():
+                        if not obj.is_a_template():
                             while '+' in value:
                                 value.remove('+')
 
@@ -1829,7 +1821,7 @@ class Items(object):
                 value = obj.get_plus_and_delete(prop)
             # Template should keep their '+' chain
             # We must say it's a '+' value, so our son will know that it must continue looping
-            if obj.is_tpl() and value != [] and value[0] != '+':
+            if obj.is_a_template() and value != [] and value[0] != '+':
                 value.insert(0, '+')
 
             # Clean the returned value
@@ -1840,7 +1832,7 @@ class Items(object):
                     if elt not in new_list:
                         new_list.append(elt)
                 value = new_list
-                if not obj.is_tpl():
+                if not obj.is_a_template():
                     while '+' in value:
                         value.remove('+')
 

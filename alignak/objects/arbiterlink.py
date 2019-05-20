@@ -122,17 +122,17 @@ class ArbiterLinks(SatelliteLinks):
     name_property = "arbiter_name"
     inner_class = ArbiterLink
 
-    def linkify(self, modules=None):
-        """Link modules to Arbiter
-
-        # TODO: why having this specific method?
-        Because of this, Arbiters do not link with realms!
-
-        :param realms: Realm object list (always None for an arbiter)
-        :type realms: list
-        :param modules: list of modules
-        :type modules: list
-        :return: None
-        """
-        logger.debug("Linkify %s with %s", self, modules)
-        self.linkify_s_by_module(modules)
+    # def linkify(self, modules=None):
+    #     """Link modules to Arbiter
+    #
+    #     # TODO: why having this specific method?
+    #     Because of this, Arbiters do not link with realms!
+    #
+    #     :param realms: Realm object list (always None for an arbiter)
+    #     :type realms: list
+    #     :param modules: list of modules
+    #     :type modules: list
+    #     :return: None
+    #     """
+    #     logger.debug("Linkify %s with %s", self, modules)
+    #     self.linkify_s_by_module(modules)
