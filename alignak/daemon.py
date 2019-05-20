@@ -490,7 +490,6 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
                                          "Using only the default parameters for its configuration."
                                          % self.name))
                     my_configuration = list(self.alignak_env.get_alignak_configuration().items())
-                    print("%s - %s = %s" % (self.name, "My conf", my_configuration))
 
                 for prop, value in my_configuration:
                     self.pre_log.append(("DEBUG",
@@ -587,8 +586,6 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
                                % (self.user, self.group), exit_code=3)
 
         # Alignak logger configuration file
-        print("Daemon '%s', logger configuration: %s" % (self.name, self.logger_configuration))
-
         if os.getenv('ALIGNAK_LOGGER_CONFIGURATION', None):
             self.logger_configuration = os.getenv('ALIGNAK_LOGGER_CONFIGURATION', None)
         if self.logger_configuration:
@@ -601,7 +598,6 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
                                                              self.logger_configuration)
                 else:
                     self.logger_configuration = os.path.abspath(self.logger_configuration)
-        print("Daemon '%s', logger configuration: %s" % (self.name, self.logger_configuration))
 
         # Log file...
         self.log_filename = PathProp().pythonize("%s.log" % self.name)
@@ -2177,6 +2173,7 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
                 setup_logger(logger_configuration_file=self.logger_configuration,
                              log_dir=self.logdir, process_name=self.name,
                              log_file=self.log_filename)
+                print("Configured a logger with directory as: %s" % self.logdir)
 
             if self.debug:
                 # Force the global logger at DEBUG level

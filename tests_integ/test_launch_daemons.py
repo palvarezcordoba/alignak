@@ -355,8 +355,8 @@ class TestLaunchDaemons(AlignakTest):
         """
         print("Launching arbiter with a missing arbiter configuration...")
 
-        if os.path.exists('%s/my-arbiter-name.log' % self._launch_dir):
-            os.remove('%s/my-arbiter-name.log' % self._launch_dir)
+        if os.path.exists('/tmp/alignak/log/my-arbiter-name.log'):
+            os.remove('/tmp/alignak/log/my-arbiter-name.log')
 
         args = ["../alignak/bin/alignak_arbiter.py",
                 "-e", '%s/etc/alignak.ini' % self.cfg_folder,
@@ -366,7 +366,7 @@ class TestLaunchDaemons(AlignakTest):
         errors = 0
         ok = False
         # Note the log filename!
-        with open('%s/my-arbiter-name.log' % self._launch_dir) as f:
+        with open('/tmp/alignak/log/my-arbiter-name.log') as f:
             for line in f:
                 if "I cannot find my own configuration (my-arbiter-name)" in line:
                     ok = True
