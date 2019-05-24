@@ -84,6 +84,8 @@ class TestNotificationWay(AlignakTest):
             'service_notification_options': ['wucrf'],
             'use': [],
             # Some more properties
+            # 'imported_form': 'alignak-self',
+            'name': '',
             'configuration_errors': [],
             'configuration_warnings': [],
             'customs': {},

@@ -1019,10 +1019,11 @@ define host {
                     # else:
                         #     print(" . %s ...ignoring, period: %d" % (name, nb_ticks))
                 else:
-                    print("*** check is still in progress for %s!" % (item.get_full_name()))
+                    print("*** check is still in progress for %s!" % item.get_full_name())
 
                 self.assertGreater(len(item.checks_in_progress), 0)
                 chk = scheduler.checks[item.checks_in_progress[0]]
+                print("- check: %s" % chk)
                 chk.set_type_active()
                 chk.check_time = time.time()
                 chk.wait_time = 0.0001

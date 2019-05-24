@@ -360,7 +360,7 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
                 logger.debug("Satellite '%s' initial brok: %s", satellite.name, brok)
                 self.add(brok)
 
-    def load_monitoring_config_file(self, clean=True):
+    def load_monitoring_config_file(self, clean=False):
         # pylint: disable=too-many-branches,too-many-statements, too-many-locals
         """Load main configuration file (alignak.cfg)::
 
@@ -378,6 +378,8 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
         The clean parameter is useful to load a configuration without removing the properties
         only used to parse the configuration and create the objects. Some utilities (like
         alignak-backend-import script) may need to avoid the cleaning ;)
+
+        Note that default is no cleaning!
 
         :param clean: set True to clean the created items
         :type clean: bool
@@ -692,18 +694,21 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
         # Create objects for all the configuration
         self.conf.create_objects(raw_objects)
 
+        # Manage all post-conf modules
+        self.hook_point('early_configuration')
+
         # Maybe configuration is already invalid
         if not self.conf.conf_is_correct:
             self.conf.show_errors()
             self.request_stop("*** One or more problems were encountered while processing "
                               "the configuration (second check)...", exit_code=1)
 
-        # Manage all post-conf modules
-        self.hook_point('early_configuration')
-
         # Here we got all our Alignak configuration and the monitored system configuration
         # from the legacy configuration files and extra modules.
         logger.info("Preparing configuration...")
+
+        # for host in self.conf.hosts:
+        #     print("Host before linkify: %d / %s\n" % (host.max_check_attempts, host))
 
         # Create Template links
         self.conf.linkify_templates()
@@ -870,8 +875,8 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
                     if o_type not in raw_objects:
                         raw_objects[o_type] = []
                     # Update the imported_from property if the module did not set
-                    if 'imported_from' not in obj:
-                        obj['imported_from'] = 'module:%s' % instance.name
+                    # if 'imported_from' not in obj:
+                    #     obj['imported_from'] = 'module:%s' % instance.name
                     # Append to the raw objects
                     raw_objects[o_type].append(obj)
                 logger.debug("Added %i %s objects from %s",

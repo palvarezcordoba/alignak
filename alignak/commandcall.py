@@ -141,11 +141,14 @@ class CommandCall(AlignakObject):
                 # from command if not set
                 self.reactionner_tag = self.command.reactionner_tag
 
+    def __repr__(self):  # pragma: no cover
+        return "'%s'" % self.get_name()
+    __str__ = __repr__
+
     def serialize(self):
-        cls = self.__class__
-        # id is not in *_properties
+        # uuid is not in *_properties
         res = {'uuid': self.uuid}
-        for prop in cls.properties:
+        for prop in self.__class__.properties:
             if hasattr(self, prop):
                 res[prop] = getattr(self, prop)
 
@@ -175,9 +178,6 @@ class CommandCall(AlignakObject):
         :rtype: bool
         """
         return self.valid
-
-    def __str__(self):  # pragma: no cover
-        return str(self.__dict__)
 
     def get_name(self):
         """Getter for call attribute

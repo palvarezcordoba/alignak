@@ -69,6 +69,7 @@ class Contact(Item):
     For example it defines host_notification_period, service_notification_period etc.
     """
     my_type = 'contact'
+    my_name_property = "%s_name" % my_type
 
     properties = Item.properties.copy()
     properties.update({
@@ -179,12 +180,8 @@ class Contact(Item):
         'min_business_impact'
     )
 
-    def __init__(self, params=None, parsing=True):
-        if params is None:
-            params = {}
-
-        # At deserialization, thoses are dict
-        # TODO: Separate parsing instance from recreated ones
+    def __init__(self, params, parsing=True):
+        # When deserialized, those are dict
         for prop in ['service_notification_commands', 'host_notification_commands']:
             if prop in params and isinstance(params[prop], list) and params[prop] \
                     and isinstance(params[prop][0], dict):
@@ -193,7 +190,9 @@ class Contact(Item):
                 setattr(self, prop, new_list)
                 # And remove prop, to prevent from being overridden
                 del params[prop]
+
         super(Contact, self).__init__(params, parsing=parsing)
+        # self.fill_default()
 
     def __str__(self):  # pragma: no cover
         return '<Contact %s, uuid=%s, use: %s />' \
@@ -210,16 +209,6 @@ class Contact(Item):
                 res[prop] = [elem.serialize() for elem in getattr(self, prop)]
 
         return res
-
-    def get_name(self):
-        """Get contact name
-
-        :return: contact name
-        :rtype: str
-        """
-        if self.is_a_template():
-            return "tpl-%s" % (getattr(self, 'name', 'unnamed'))
-        return getattr(self, 'contact_name', 'unnamed')
 
     def get_groupname(self):
         """
@@ -366,8 +355,8 @@ class Contact(Item):
         if not self.notificationways:
             for prop in self.special_properties:
                 if not hasattr(self, prop):
-                    msg = "[contact::%s] %s property is missing" % (self.get_name(), prop)
-                    self.add_error(msg)
+                    self.add_error("[contact::%s] %s property is missing"
+                                   % (self.get_name(), prop))
                     state = False
 
         if not hasattr(self, 'contact_name'):
@@ -379,9 +368,8 @@ class Contact(Item):
             if char not in self.contact_name:
                 continue
 
-            msg = "[contact::%s] %s character not allowed in contact_name" \
-                  % (self.get_name(), char)
-            self.add_error(msg)
+            self.add_error("[contact::%s] %s character not allowed in contact_name"
+                           % (self.get_name(), char))
             state = False
 
         return super(Contact, self).is_correct() and state
@@ -436,7 +424,6 @@ class Contacts(CommandCallItems):
     """Contacts manage a list of Contacts objects, used for parsing configuration
 
     """
-    name_property = "contact_name"
     inner_class = Contact
 
     def linkify(self, commands, notificationways):

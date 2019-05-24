@@ -150,29 +150,33 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
 
     cache_path = "objects.cache"
     my_type = "config"
+    my_name_property = "config_name"
 
-    # Properties:
-    # *required: if True, there is not default, and the config must put them
-    # *default: if not set, take this value
-    # *pythonize: function call to
-    # *class_inherit: (Service, 'blabla'): must set this property to the
-    #  Service class with name blabla
-    #  if (Service, None): must set this property to the Service class with
-    #  same name
-    # *unused: just to warn the user that the option he use is no more used
-    #  in Alignak
-    # *usage_text: if present, will print it to explain why it's no more useful
-    # ---
-    # All the properties with FULL_STATUS in the fill_brok will be include in the
-    # 'program_status' and 'update_program_status' broks.
-    # ---
     """Configuration properties:
+    * required: if True, there is not default, and the config must put them
+    * default: if not set, take this value
+    * pythonize: function call to
+    * class_inherit: (Service, 'blabla'): must set this configuration property to the
+      Service class with name blabla
+      If (Service, None): must set this property to the Service class with same name
+    * unused: just to warn the user that the option he use is no more used in Alignak
+    * usage_text: if present, will print it to explain why it's no more useful
+    ---
+    All the properties with FULL_STATUS in the fill_brok will be included in the
+    'program_status' and 'update_program_status' broks.
+    ---
     """
     properties = {
         # Some tuning parameters
+        # ----------
+        # When set, this parameter makes run the configuration clean once the data are
+        # ready to be prepared for dispatching to the daemons.
+        'clean_objects':
+            BoolProp(default=False),
+
         # When set, this parameter makes the configuration checked for consistency between
-        # hostgroups and hosts realmq. If hosts and their hostgroups do not belong to the
-        # same realm the configuration is declared as cirrupted
+        # hostgroups and hosts realms. If hosts and their hostgroups do not belong to the
+        # same realm the configuration is declared as coirrupted
         'forced_realms_hostgroups':
             BoolProp(default=True),
 
@@ -908,29 +912,33 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                 self.__class__.properties['$USER%d$' % i] = StringProp(default='')
 
             # Fill all the configuration properties with their default values
-            self.fill_default()
+            # self.fill_default()
         elif 'instance_id' not in params:
             logger.error("When not parsing a configuration, an instance_id "
                          "must exist in the provided parameters for a configuration!")
         else:
             self.instance_id = params['instance_id']
 
-        # At deserialization, those are dictionaries
+        # When deserialized, those are dictionaries
         # TODO: Separate parsing instance from recreated ones
-        for prop in ['host_perfdata_command', 'service_perfdata_command',
-                     'global_host_event_handler', 'global_service_event_handler']:
-            if prop in params and isinstance(params[prop], dict):
-                # We recreate the object
-                setattr(self, prop, CommandCall(params[prop], parsing=parsing))
-                # And remove prop, to prevent from being overridden
-                del params[prop]
+        if params:
+            for prop in ['host_perfdata_command', 'service_perfdata_command',
+                         'global_host_event_handler', 'global_service_event_handler']:
+                if prop in params and isinstance(params[prop], dict):
+                    # We recreate the object
+                    setattr(self, prop, CommandCall(params[prop], parsing=parsing))
+                    # And remove prop, to prevent from being overridden
+                    del params[prop]
 
-        for _, clss, strclss, _, _ in list(self.types_creations.values()):
-            if strclss in params and isinstance(params[strclss], dict):
-                setattr(self, strclss, clss(params[strclss], parsing=parsing))
-                del params[strclss]
+            for _, clss, strclss, _, _ in list(self.types_creations.values()):
+                if strclss in params and isinstance(params[strclss], dict):
+                    setattr(self, strclss, clss(params[strclss], parsing=parsing))
+                    del params[strclss]
 
         super(Config, self).__init__(params, parsing=parsing)
+
+        self.fill_default()
+
         self.params = {}
         self.resource_macros_names = []
 
@@ -1386,32 +1394,27 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
         # Business rule
         raw_objects['command'].append({
             'command_name': 'bp_rule',
-            'command_line': 'bp_rule',
-            'imported_from': 'alignak-self'
+            'command_line': 'bp_rule'
         })
         # Internal host checks
         raw_objects['command'].append({
             'command_name': '_internal_host_up',
-            'command_line': '_internal_host_up',
-            'imported_from': 'alignak-self'
+            'command_line': '_internal_host_up'
         })
         raw_objects['command'].append({
             'command_name': '_internal_host_check',
             # Command line must contain: state_id;output
-            'command_line': '_internal_host_check;$ARG1$;$ARG2$',
-            'imported_from': 'alignak-self'
+            'command_line': '_internal_host_check;$ARG1$;$ARG2$'
         })
         # Internal service check
         raw_objects['command'].append({
             'command_name': '_echo',
-            'command_line': '_echo',
-            'imported_from': 'alignak-self'
+            'command_line': '_echo'
         })
         raw_objects['command'].append({
             'command_name': '_internal_service_check',
             # Command line must contain: state_id;output
-            'command_line': '_internal_service_check;$ARG1$;$ARG2$',
-            'imported_from': 'alignak-self'
+            'command_line': '_internal_service_check;$ARG1$;$ARG2$'
         })
 
     def early_create_objects(self, raw_objects):
@@ -1721,40 +1724,39 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
         self.services.apply_dependencies(self.hosts)
 
     def apply_inheritance(self):
-        """Apply inheritance over templates
-        Template can be used in the following objects::
+        """Apply inheritance from the templates
+        Templates can be used in the following objects:
 
         * hosts
         * contacts
         * services
-        * servicedependencies
-        * hostdependencies
+        * services dependencies
+        * hosts dependencies
         * timeperiods
-        * hostsextinfo
-        * servicesextinfo
-        * serviceescalations
-        * hostescalations
+        * hosts extinfo
+        * services extinfo
+        * service escalations
+        * host escalations
         * escalations
 
         :return: None
         """
-        # inheritance properties by template
-        self.hosts.apply_inheritance()
-        self.contacts.apply_inheritance()
-        self.services.apply_inheritance()
-        self.servicedependencies.apply_inheritance()
-        self.hostdependencies.apply_inheritance()
-        # Also timeperiods
-        self.timeperiods.apply_inheritance()
-        # Also "Hostextinfo"
-        self.hostsextinfo.apply_inheritance()
-        # Also "Serviceextinfo"
-        self.servicesextinfo.apply_inheritance()
+        logger.debug("Applying inheritance:")
 
-        # Now escalations too
-        self.serviceescalations.apply_inheritance()
-        self.hostescalations.apply_inheritance()
-        self.escalations.apply_inheritance()
+        types_creations = self.__class__.types_creations
+        for o_type in types_creations:
+            (_, _, inner_property, _, _) = types_creations[o_type]
+            # Not yet for the realms and daemons links
+            if inner_property in ['realms', 'arbiters', 'schedulers', 'reactionners',
+                                  'pollers', 'brokers', 'receivers',
+                                  'modules']:
+                continue
+            logger.debug("  . for %s", inner_property,)
+            inner_object = getattr(self, inner_property, None)
+            if inner_object is None:
+                logger.debug("No %s to fill with default values", inner_property)
+                continue
+            inner_object.apply_inheritance()
 
     def apply_implicit_inheritance(self):
         """Wrapper for calling apply_implicit_inheritance method of services attributes
@@ -2233,7 +2235,6 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                 'name': 'inner-metrics',
                 'type': 'metrics',
                 'python_name': 'alignak.modules.inner_metrics',
-                'imported_from': 'inner',
                 'enabled': True
             }
             if getattr(self, 'host_perfdata_file', None):
@@ -2261,7 +2262,6 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                 'name': 'inner-retention',
                 'type': 'retention',
                 'python_name': 'alignak.modules.inner_retention',
-                'imported_from': 'inner',
                 'enabled': True
             }
             if getattr(self, 'state_retention_file', None) is not None:
@@ -2660,12 +2660,14 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
         # Now we look if all elements of all packs have the
         # same realm. If not, not good!
         for hosts_pack in graph.get_accessibility_packs():
+            print(" hosts pack- %s " % (hosts_pack))
             passively_checked_hosts = False
             actively_checked_hosts = False
             tmp_realms = set()
             logger.debug(" - host pack hosts:")
             for host_id in hosts_pack:
                 host = self.hosts[host_id]
+                print(" pack host - %s / %s" % (host_id, host))
                 logger.debug("  - %s", host.get_name())
                 passively_checked_hosts = passively_checked_hosts or host.passive_checks_enabled
                 actively_checked_hosts = actively_checked_hosts or host.active_checks_enabled

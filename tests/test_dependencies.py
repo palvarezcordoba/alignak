@@ -223,6 +223,7 @@ class TestDependencies(AlignakTest):
         self.setup_with_file('cfg/cfg_dependencies.cfg',
                              dispatching=True)
         assert self.conf_is_correct
+        self.show_logs()
         assert len(self.configuration_errors) == 0
         assert len(self.configuration_warnings) == 0
 
@@ -235,8 +236,7 @@ class TestDependencies(AlignakTest):
         test_host_00 = self._scheduler.hosts.find_by_name("test_host_00")
         assert 1 == len(test_host_00.act_depend_of)
         for (host, _, _, _) in test_host_00.act_depend_of:
-            assert self._scheduler.hosts[host].host_name == \
-                             'test_router_00'
+            assert self._scheduler.hosts[host].host_name == 'test_router_00'
 
         # test test_host_00.test_ok_1 -> test_host_00
         # test test_host_00.test_ok_1 -> test_host_00.test_ok_0
@@ -244,11 +244,9 @@ class TestDependencies(AlignakTest):
             "test_host_00", "test_ok_1")
         for (dep_id, _, _, _) in svc.act_depend_of:
             if dep_id in self._scheduler.hosts:
-                assert self._scheduler.hosts[dep_id].host_name == \
-                                 'test_host_00'
+                assert self._scheduler.hosts[dep_id].host_name == 'test_host_00'
             else:
-                assert self._scheduler.services[dep_id].service_description == \
-                                 'test_ok_0'
+                assert self._scheduler.services[dep_id].service_description == 'test_ok_0'
 
         # test test_host_C -> test_host_A
         # test test_host_C -> test_host_B
@@ -263,30 +261,25 @@ class TestDependencies(AlignakTest):
         test_host_e = self._scheduler.hosts.find_by_name("test_host_E")
         assert 1 == len(test_host_e.act_depend_of)
         for (host, _, _, _) in test_host_e.act_depend_of:
-            assert self._scheduler.hosts[host].host_name == \
-                             'test_host_D'
+            assert self._scheduler.hosts[host].host_name == 'test_host_D'
 
         # test test_host_11.test_parent_svc -> test_host_11.test_son_svc
         svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_11", "test_parent_svc")
         for (dep_id, _, _, _) in svc.act_depend_of:
             if dep_id in self._scheduler.hosts:
-                assert self._scheduler.hosts[dep_id].host_name == \
-                                 'test_host_11'
+                assert self._scheduler.hosts[dep_id].host_name == 'test_host_11'
             else:
-                assert self._scheduler.services[dep_id].service_description == \
-                                 'test_son_svc'
+                assert self._scheduler.services[dep_id].service_description == 'test_son_svc'
 
         # test test_host_11.test_ok_1 -> test_host_11.test_ok_0
         svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_11", "test_ok_1")
         for (dep_id, _, _, _) in svc.act_depend_of:
             if dep_id in self._scheduler.hosts:
-                assert self._scheduler.hosts[dep_id].host_name == \
-                                 'test_host_11'
+                assert self._scheduler.hosts[dep_id].host_name == 'test_host_11'
             else:
-                assert self._scheduler.services[dep_id].service_description == \
-                                 'test_ok_0'
+                assert self._scheduler.services[dep_id].service_description == 'test_ok_0'
 
     def test_c_host_passive_service_active(self):
         """ Test host passive and service active
@@ -390,6 +383,7 @@ class TestDependencies(AlignakTest):
         """
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg',
                              dispatching=True)
+        self.show_logs()
 
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
@@ -921,7 +915,8 @@ class TestDependencies(AlignakTest):
             self.show_checks()
             self.assert_actions_count(1)
             self.show_actions()
-            self.assert_actions_match(0, 'notifier.pl --hostname test_host_00 --notificationtype PROBLEM --hoststate DOWN', 'command')
+            self.assert_actions_match(0, 'notifier.pl --hostname test_host_00 --notificationtype '
+                                         'PROBLEM --hoststate DOWN', 'command')
 
     def test_a_m_service_host_host_critical(self):
         """ Test the dependencies between service -> host -> host
@@ -939,6 +934,7 @@ class TestDependencies(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_dependencies.cfg', dispatching=True)
+        self.show_logs()
         # 4 hosts:
         # test_router_0
         # test_host_0

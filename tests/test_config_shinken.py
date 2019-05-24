@@ -57,7 +57,8 @@ class TestConfigShinken(AlignakTest):
         # l = [
         #     u"Some hosts exist in the realm 'France' but no broker is defined for this realm",
         #     u"Added a broker (broker-France, http://127.0.0.1:7772/) for the realm 'France'",
-        #     u'Host graphite use/inherit from an unknown template: graphite ! from: /home/alignak/alignak/test/cfg/_shinken/hosts/graphite.cfg:1'
+        #     u'Host graphite use/inherit from an unknown template: graphite ! from:
+        #     /home/alignak/alignak/test/cfg/_shinken/hosts/graphite.cfg:1'
         # ]
         self.assert_any_cfg_log_match(
             "Host graphite use/inherit from an unknown template: graphite ! "

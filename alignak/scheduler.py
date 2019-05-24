@@ -517,7 +517,7 @@ class Scheduler(object):  # pylint: disable=too-many-instance-attributes
         self.actions[notification.uuid] = notification
         self.nb_notifications += 1
 
-        # A notification which is not a master one asks for a brok
+        # A notification which is not a master one raises a brok
         if notification.contact is not None:
             self.add(notification.get_initial_status_brok())
 
@@ -1503,26 +1503,43 @@ class Scheduler(object):  # pylint: disable=too-many-instance-attributes
         brok = self.get_program_status_brok()
         self.add_brok(brok, broker_uuid)
 
-        #  We can't call initial_status from all this types
-        #  The order is important, service need host...
-        initial_status_types = (self.timeperiods, self.commands,
-                                self.contacts, self.contactgroups,
-                                self.hosts, self.hostgroups,
-                                self.services, self.servicegroups)
+        # #  We can't call initial_status from all this types
+        # #  The order is important, service need host...
+        # initial_status_types = (self.timeperiods, self.commands,
+        #                         self.contacts, self.contactgroups,
+        #                         self.hosts, self.hostgroups,
+        #                         self.services, self.servicegroups)
 
         self.pushed_conf.skip_initial_broks = getattr(self.pushed_conf, 'skip_initial_broks', False)
         logger.debug("Skipping initial broks? %s", str(self.pushed_conf.skip_initial_broks))
         if not self.pushed_conf.skip_initial_broks:
-            #  We call initial_status from all this types
+            #  Get initial_status broks for all these types of objects
             #  The order is important, service need host...
-            initial_status_types = (self.realms, self.timeperiods, self.commands,
-                                    self.notificationways, self.contacts, self.contactgroups,
-                                    self.hosts, self.hostgroups, self.hostdependencies,
-                                    self.services, self.servicegroups, self.servicedependencies,
-                                    self.escalations)
+            for t in [self.realms, self.timeperiods, self.commands,
+                      self.notificationways, self.contacts, self.contactgroups,
+                      self.hosts, self.hostgroups, self.hostdependencies,
+                      self.services, self.servicegroups, self.servicedependencies,
+                      self.escalations]:
+                if not t:
+                    continue
+                for item in t:
+                    # Awful! simply to get the group members property name... :(
+                    # todo: replace this!
+                    member_items = None
+                    if hasattr(item, 'members'):
+                        member_items = getattr(self, item.my_type.replace("group", "s"))
+                    brok = item.get_initial_status_brok(member_items)
+                    self.add_brok(brok, broker_uuid)
 
-            for tab in initial_status_types:
-                for item in tab:
+            #  Get initial_status broks for all these types of templates
+            #  The order is important, service need host...
+            for t in [self.contacts, self.hosts, self.services]:
+                if not t:
+                    continue
+                print("Type %s: %s" % (len(t), t))
+                print("Type %s: %s" % (t.inner_class.my_type, len(t)))
+                print("Templates: %d %s" % (len(t.templates), t.templates))
+                for item in t.templates:
                     # Awful! simply to get the group members property name... :(
                     # todo: replace this!
                     member_items = None
@@ -1624,6 +1641,7 @@ class Scheduler(object):  # pylint: disable=too-many-instance-attributes
             if chk.status == ACT_STATUS_WAIT_CONSUME:
                 logger.debug("Consuming: %s", chk)
                 item = self.find_item_by_id(chk.ref)
+
                 notification_period = None
                 if getattr(item, 'notification_period', None) is not None:
                     notification_period = self.timeperiods[item.notification_period]
@@ -1642,7 +1660,7 @@ class Scheduler(object):  # pylint: disable=too-many-instance-attributes
                 #     item.raise_check_result()
                 #
                 for check in dep_checks:
-                    logger.debug("-> raised a dependency check: %s", chk)
+                    logger.debug("-> raised a dependency check: %s", check)
                     self.add(check)
 
         # loop to resolve dependencies
@@ -1659,7 +1677,7 @@ class Scheduler(object):  # pylint: disable=too-many-instance-attributes
                     # REMOVE OLD DEP CHECK -> zombie
                     chk.status = ACT_STATUS_ZOMBIE
 
-            # Now, reinteger dep checks
+            # Now, inclmude dependent checks
             for chk in list(self.checks.values()):
                 if chk.status == ACT_STATUS_WAIT_DEPEND and not chk.depend_on:
                     item = self.find_item_by_id(chk.ref)

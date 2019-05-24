@@ -71,6 +71,8 @@ class Realm(Itemgroup):
 
     """
     my_type = 'realm'
+    my_name_property = "%s_name" % my_type
+
     members_property = "members"
     group_members_property = "realm_members"
 
@@ -146,7 +148,7 @@ class Realm(Itemgroup):
         'REALMHOSTS_COUNT': 'hosts_count',
     }
 
-    def __init__(self, params=None, parsing=True):
+    def __init__(self, params, parsing=True):
         super(Realm, self).__init__(params, parsing)
 
         self.fill_default()
@@ -209,14 +211,6 @@ class Realm(Itemgroup):
     def name(self):
         """Get the realm name"""
         return self.get_name()
-
-    def get_name(self):
-        """Accessor to realm_name attribute
-
-        :return: realm name
-        :rtype: str
-        """
-        return getattr(self, 'realm_name', 'unset')
 
     def add_group_members(self, members):
         """Add a new group member to the groups list
@@ -523,7 +517,6 @@ class Realms(Itemgroups):
     """Realms manage a list of Realm objects, used for parsing configuration
 
     """
-    name_property = "realm_name"
     inner_class = Realm
 
     def __init__(self, items, index_items=True, parsing=True):

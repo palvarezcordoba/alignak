@@ -91,6 +91,7 @@ class Host(SchedulingItem):  # pylint: disable=too-many-public-methods
 
     ok_up = u'UP'
     my_type = 'host'
+    my_name_property = "%s_name" % my_type
 
     # if Host(or more generally Item) instances were created with all properties
     # having a default value set in the instance then we wouldn't need this:
@@ -250,15 +251,18 @@ class Host(SchedulingItem):  # pylint: disable=too-many-public-methods
         'hostgroup': 'hostgroups',
     })
 
-    def __init__(self, params=None, parsing=True):
+    def __init__(self, params, parsing=True):
         # Must convert the unreachable properties to manage the new 'x' option value
         self.convert_conf_for_unreachable(params=params)
+
         super(Host, self).__init__(params, parsing=parsing)
+        # self.fill_default()
 
     def __str__(self):  # pragma: no cover
-        return '<Host %s, uuid=%s, %s (%s), realm: %s, use: %s />' \
-               % (self.get_full_name(), self.uuid, self.state, self.state_type,
-                  getattr(self, 'realm', 'Unset'), getattr(self, 'use', None))
+        return '<Host %s %s, uuid=%s, %s (%s), realm: %s, use: %s />' \
+               % ('template' if self.is_a_template() else '', self.get_full_name(), self.uuid,
+                  self.state, self.state_type, getattr(self, 'realm', 'Unset'),
+                  getattr(self, 'use', None))
     __repr__ = __str__
 
 #######
@@ -358,33 +362,13 @@ class Host(SchedulingItem):  # pylint: disable=too-many-public-methods
         """
         return self.services
 
-    def get_name(self):
-        """Get the host name.
-        Try several attributes before returning UNNAMED*
-
-        :return: The name of the host
-        :rtype: str
-        """
-        if not self.is_a_template():
-            try:
-                return self.host_name
-            except AttributeError:  # outch, no hostname
-                return 'UNNAMEDHOST'
-        else:
-            try:
-                return self.name
-            except AttributeError:  # outch, no name for this template
-                return 'UNNAMEDHOSTTEMPLATE'
-
     def get_full_name(self):
         """Accessor to host_name attribute
 
         :return: host_name
         :rtype: str
         """
-        if self.is_a_template():
-            return "tpl-%s" % (self.name)
-        return getattr(self, 'host_name', 'unnamed')
+        return self.get_name()
 
     def get_groupname(self, hostgroups):
         """Get name of the first host's hostgroup (alphabetic sort)
@@ -1355,14 +1339,14 @@ class Hosts(SchedulingItems):
         self.linkify_with_contacts(contacts)
         # No more necessary
         self.linkify_h_by_realms(realms)
-        self.linkify_with_resultmodulations(resultmodulations)
+        self.linkify_with_result_modulations(resultmodulations)
         self.linkify_with_business_impact_modulations(businessimpactmodulations)
         # WARNING: all escalations will not be link here
         # (just the escalation here, not serviceesca or hostesca).
         # This last one will be link in escalations linkify.
         self.linkify_with_escalations(escalations)
-        self.linkify_with_checkmodulations(checkmodulations)
-        self.linkify_with_macromodulations(macromodulations)
+        self.linkify_with_check_modulations(checkmodulations)
+        self.linkify_with_macro_modulations(macromodulations)
 
     def fill_predictive_missing_parameters(self):
         """Loop on hosts and call Host.fill_predictive_missing_parameters()
@@ -1386,9 +1370,8 @@ class Hosts(SchedulingItems):
                 if o_parent is not None:
                     new_parents.append(o_parent.uuid)
                 else:
-                    err = "the parent '%s' for the host '%s' is unknown!" % (parent,
-                                                                             host.get_name())
-                    self.add_error(err)
+                    self.add_error("the parent '%s' for the host '%s' is unknown!"
+                                   % (parent, host.get_name()))
             # We find the id, we replace the names
             host.parents = new_parents
 

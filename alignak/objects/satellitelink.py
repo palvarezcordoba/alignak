@@ -219,7 +219,7 @@ class SatelliteLink(Item):
             DictProp(default={}),
     })
 
-    def __init__(self, params=None, parsing=True):
+    def __init__(self, params, parsing=True):
         """Initialize a SatelliteLink
 
         If parsing is True, we are initializing from a configuration, else we are initializing

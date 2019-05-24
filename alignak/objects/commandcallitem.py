@@ -21,7 +21,7 @@
 """ This module contains only a class for items objects that contains CommandCall objects.
 """
 
-from alignak.objects.item import Items
+from alignak.objects.item import Item, Items
 from alignak.commandcall import CommandCall
 from alignak.util import strip_and_uniq
 

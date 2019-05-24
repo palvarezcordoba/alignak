@@ -153,13 +153,13 @@ class BaseModule(object):
         """
         return self.name
 
-    def get_name(self):
-        """Wrapper to access name attribute
-
-        :return: module name
-        :rtype: str
-        """
-        return self.name
+    # def get_name(self):
+    #     """Wrapper to access name attribute
+    #
+    #     :return: module name
+    #     :rtype: str
+    #     """
+    #     return self.name
 
     def init(self):  # pylint: disable=no-self-use
         """Handle this module "post" init ; just before it'll be started.

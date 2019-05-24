@@ -55,6 +55,7 @@ from alignak.objects.item import Items
 
 logger = logging.getLogger(__name__)
 
+
 class TestEndParsingType(AlignakTest):
     """
     This class test properties types after config loaded and parsed
@@ -231,7 +232,7 @@ class TestEndParsingType(AlignakTest):
                 print("Skipping %s " % prop)
 
         print("== test Timeperiod() ==")
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         for prop in timeperiod.properties:
             if not hasattr(timeperiod, prop):
                 continue

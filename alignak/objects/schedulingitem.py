@@ -466,12 +466,8 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
 
     special_properties = []
 
-    def __init__(self, params=None, parsing=True):
-        if params is None:
-            params = {}
-
-        # At deserialization, these are dictionaries
-        # TODO: Separate parsing instance from recreated ones
+    def __init__(self, params, parsing=True):
+        # When deserialized, those are dictionaries
         for prop in ['check_command', 'event_handler', 'snapshot_command']:
             if prop in params and isinstance(params[prop], dict):
                 # We recreate the object
@@ -483,7 +479,11 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
             del params['business_rule']
         if 'acknowledgement' in params and isinstance(params['acknowledgement'], dict):
             self.acknowledgement = Acknowledge(params['acknowledgement'])
+            del params['acknowledgement']
+
         super(SchedulingItem, self).__init__(params, parsing=parsing)
+        # Default will be filled in Host or Service class!
+        # self.fill_default()
 
     @property
     def monitored(self):
@@ -513,8 +513,8 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
     def serialize(self):
         res = super(SchedulingItem, self).serialize()
 
-        for prop in ['check_command', 'event_handler', 'snapshot_command', 'business_rule',
-                     'acknowledgement']:
+        for prop in ['check_command', 'event_handler', 'snapshot_command',
+                     'business_rule', 'acknowledgement']:
             res[prop] = None
             if getattr(self, prop, None) is not None:
                 res[prop] = getattr(self, prop).serialize()
@@ -1577,9 +1577,9 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
 
         Special cases::
 
-        * is_flapping: immediate notif when problem
+        * is_flapping: immediate notification when a problem raises
         * is_in_scheduled_downtime: no notification
-        * is_volatile: notif immediately (service only)
+        * is_volatile: immediate notification when a problem raises (service only)
 
         Basically go through all cases (combination of last_state, current_state, attempt number)
         and do necessary actions (add attempt, raise notification., change state type.)
@@ -2451,6 +2451,7 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
             check_command = self.check_command
             command_line = ''
             if check_command:
+                print("Command: %s" % check_command)
                 poller_tag = check_command.poller_tag
                 module_type = check_command.module_type
 
@@ -3424,8 +3425,7 @@ class SchedulingItems(CommandCallItems):
         if son_id in self:
             son = self[son_id]
         else:
-            msg = "Dependency son (%s) unknown, configuration error" % son_id
-            self.add_error(msg)
+            self.add_error("Dependent son (%s) is unknown, configuration error!" % son_id)
         parent = self[parent_id]
         son.act_depend_of.append((parent_id, notif_failure_criteria, dep_period, inherits_parents))
         parent.act_depend_of_me.append((son_id, notif_failure_criteria, dep_period,

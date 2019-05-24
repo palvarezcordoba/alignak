@@ -67,16 +67,8 @@ class Hostdependency(Item):
 
     """
     my_type = 'hostdependency'
-
-    # F is dep of D
-    # host_name                      Host B
-    #       service_description             Service D
-    #       dependent_host_name             Host C
-    #       dependent_service_description   Service F
-    #       execution_failure_criteria      o
-    #       notification_failure_criteria   w,u
-    #       inherits_parent         1
-    #       dependency_period       24x7
+    my_name_property = "host_service"
+    my_index_property = "host_service"
 
     properties = Item.properties.copy()
     properties.update({
@@ -98,31 +90,30 @@ class Hostdependency(Item):
             StringProp(default='')
     })
 
-    def __init__(self, params=None, parsing=True):
-        if params is None:
-            params = {}
-
+    def __init__(self, params, parsing=True):
+        # Update default options
         for prop in ['execution_failure_criteria', 'notification_failure_criteria']:
             if prop in params:
                 params[prop] = [p.replace('u', 'x') for p in params[prop]]
         super(Hostdependency, self).__init__(params, parsing=parsing)
+        # self.fill_default()
 
-    def get_name(self):
+    def get_name(self, index=False):
         """Get name based on dependent_host_name and host_name attributes
-        Each attribute is substituted by 'unknown' if attribute does not exist
+        Each attribute is replaced with 'unknown' if attribute is not set
 
         :return: dependent_host_name/host_name
         :rtype: str
         """
-        dependent_host_name = 'unknown'
-        if getattr(self, 'dependent_host_name', None):
-            dependent_host_name = getattr(
-                getattr(self, 'dependent_host_name'), 'host_name', 'unknown'
-            )
-        host_name = 'unknown'
-        if getattr(self, 'host_name', None):
-            host_name = getattr(getattr(self, 'host_name'), 'host_name', 'unknown')
-        return dependent_host_name + '/' + host_name
+        # dependent_host_name = getattr(self, 'dependent_host_name', 'unknown')
+        # # if getattr(self, 'dependent_host_name', None):
+        # #     dependent_host_name = getattr(getattr(self, 'dependent_host_name'),
+        # #                                   'host_name', 'unknown')
+        # host_name = getattr(self, 'host_name', 'unknown')
+        # # if getattr(self, 'host_name', None):
+        # #     host_name = getattr(getattr(self, 'host_name'), 'host_name', 'unknown')
+        return "{}->{}".format(getattr(self, 'dependent_host_name', 'unknown'),
+                               getattr(self, 'host_name', 'unknown'))
 
 
 class Hostdependencies(Items):
@@ -131,7 +122,7 @@ class Hostdependencies(Items):
     """
     inner_class = Hostdependency  # use for know what is in items
 
-    def delete_hostsdep_by_id(self, ids):
+    def delete_host_dep_by_id(self, ids):
         """Delete a list of hostdependency
 
         :param ids: ids list to delete
@@ -152,58 +143,68 @@ class Hostdependencies(Items):
         :type hostgroups: alignak.objects.hostgroup.Hostgroups
         :return: None
         """
+        print("HostDep explode: %d items" % len(self.items))
+
         # The "old" dependencies will be removed. All dependencies with
         # more than one host or a host group will be in it
-        hstdep_to_remove = []
+        to_be_removed = []
 
         # Then for every host create a copy of the dependency with just the host
         # because we are adding services, we can't just loop in it
-        hostdeps = list(self.items.keys())
-        for h_id in hostdeps:
-            hostdep = self.items[h_id]
+        for host_dep_id in list(self.items.keys()):
+            host_dep = self.items[host_dep_id]
+
+            print("Host dep: %s" % host_dep)
+            # from pprint import pprint
+            # pprint(host_dep.__dict__)
+
             # We explode first the dependent (son) part
-            dephnames = []
-            if hasattr(hostdep, 'dependent_hostgroup_name'):
-                dephg_names = [n.strip() for n in hostdep.dependent_hostgroup_name.split(',')]
-                for dephg_name in dephg_names:
-                    dephg = hostgroups.find_by_name(dephg_name)
-                    if dephg is None:
-                        err = "ERROR: the hostdependency got " \
-                              "an unknown dependent_hostgroup_name '%s'" % dephg_name
-                        hostdep.add_error(err)
-                        continue
-                    dephnames.extend([m.strip() for m in dephg.get_hosts()])
-
-            if hasattr(hostdep, 'dependent_host_name'):
-                dephnames.extend([n.strip() for n in hostdep.dependent_host_name.split(',')])
-
-            # Ok, and now the father part :)
-            hnames = []
-            if hasattr(hostdep, 'hostgroup_name'):
-                hg_names = [n.strip() for n in hostdep.hostgroup_name.split(',')]
+            son_hosts = []
+            if getattr(host_dep, 'dependent_hostgroup_name', ''):
+                hg_names = [g.strip() for g in host_dep.dependent_hostgroup_name.split(',')]
                 for hg_name in hg_names:
                     hostgroup = hostgroups.find_by_name(hg_name)
                     if hostgroup is None:
-                        err = "ERROR: the hostdependency got" \
-                              " an unknown hostgroup_name '%s'" % hg_name
-                        hostdep.add_error(err)
+                        host_dep.add_error("A hostdependency got an unknown "
+                                           "dependent_hostgroup_name '%s'" % hg_name)
                         continue
-                    hnames.extend([m.strip() for m in hostgroup.get_hosts()])
+                    son_hosts.extend([m.strip() for m in hostgroup.get_hosts()])
 
-            if hasattr(hostdep, 'host_name'):
-                hnames.extend([n.strip() for n in hostdep.host_name.split(',')])
+            if getattr(host_dep, 'dependent_host_name', ''):
+                son_hosts.extend([h.strip() for h in host_dep.dependent_host_name.split(',')])
+            print("- son hosts: %s" % son_hosts)
+
+            # Ok, and now the father part :)
+            father_hosts = []
+            if getattr(host_dep, 'hostgroup_name', ''):
+                hg_names = [g.strip() for g in host_dep.hostgroup_name.split(',')]
+                for hg_name in hg_names:
+                    hostgroup = hostgroups.find_by_name(hg_name)
+                    if hostgroup is None:
+                        host_dep.add_error("A hostdependency got an unknown "
+                                           "hostgroup_name '%s'" % hg_name)
+                        continue
+                    father_hosts.extend([m.strip() for m in hostgroup.get_hosts()])
+            print("- father hosts: %s" % (father_hosts))
+
+            if getattr(host_dep, 'host_name', ''):
+                father_hosts.extend([h.strip() for h in host_dep.host_name.split(',')])
 
             # Loop over all sons and fathers to get S*F host deps
-            for dephname in dephnames:
-                dephname = dephname.strip()
-                for hname in hnames:
-                    new_hd = hostdep.copy()
-                    new_hd.dependent_host_name = dephname
-                    new_hd.host_name = hname
+            for dep_hname in son_hosts:
+                dep_hname = dep_hname.strip()
+                for host_name in father_hosts:
+                    new_hd = host_dep.copy()
+                    new_hd.dependent_host_name = dep_hname
+                    new_hd.host_name = host_name
                     self.add_item(new_hd)
-            hstdep_to_remove.append(h_id)
+                    print("-> new HD: %s" % new_hd)
+                to_be_removed.append(host_dep_id)
 
-        self.delete_hostsdep_by_id(hstdep_to_remove)
+        print("HostDep remove: %d items" % len(to_be_removed))
+        self.delete_host_dep_by_id(to_be_removed)
+
+        print("HostDep explode: %d items" % len(self.items))
 
     def linkify(self, hosts, timeperiods):
         """Create link between objects::
@@ -217,11 +218,11 @@ class Hostdependencies(Items):
         :type timeperiods: alignak.objects.timeperiod.Timeperiods
         :return: None
         """
-        self.linkify_hd_by_h(hosts)
-        self.linkify_hd_by_tp(timeperiods)
-        self.linkify_h_by_hd(hosts)
+        self.linkify_host_dep_by_host(hosts)
+        self.linkify_host_dep_by_timeperiod(timeperiods)
+        self.linkify_host_by_host_dep(hosts)
 
-    def linkify_hd_by_h(self, hosts):
+    def linkify_host_dep_by_host(self, hosts):
         """Replace dependent_host_name and host_name
         in host dependency by the real object
 
@@ -250,7 +251,7 @@ class Hostdependencies(Items):
                 err = "Error: the host dependency miss a property '%s'" % exp
                 hostdep.add_error(err)
 
-    def linkify_hd_by_tp(self, timeperiods):
+    def linkify_host_dep_by_timeperiod(self, timeperiods):
         """Replace dependency_period by a real object in host dependency
 
         :param timeperiods: list of timeperiod, used to look for a specific one
@@ -268,7 +269,7 @@ class Hostdependencies(Items):
             except AttributeError as exp:  # pragma: no cover, simple protectionn
                 logger.error("[hostdependency] fail to linkify by timeperiod: %s", exp)
 
-    def linkify_h_by_hd(self, hosts):
+    def linkify_host_by_host_dep(self, hosts):
         """Add dependency in host objects
         :param hosts: hosts list
         :type hosts: alignak.objects.host.Hosts
@@ -313,24 +314,20 @@ class Hostdependencies(Items):
         :rtype: bool
         """
         state = True
+        print("HD is correct ?")
 
         # Internal checks before executing inherited function...
         loop = self.no_loop_in_parents("host_name", "dependent_host_name")
         if loop:
-            msg = "Loop detected while checking host dependencies"
-            self.add_error(msg)
+            self.add_error("Loop detected while checking host dependencies:")
             state = False
             for item in self:
                 for elem in loop:
                     if elem == item.host_name:
-                        msg = "Host %s is parent host_name in dependency defined in %s" % (
-                            item.host_name_string, item.imported_from
-                        )
-                        self.add_error(msg)
+                        self.add_error("- host %s is a parent host_name in dependency defined in %s"
+                                       % (item.host_name_string, item.imported_from))
                     elif elem == item.dependent_host_name:
-                        msg = "Host %s is child host_name in dependency defined in %s" % (
-                            item.dependent_host_name_string, item.imported_from
-                        )
-                        self.add_error(msg)
+                        self.add_error("- host %s is a child host_name in dependency defined in %s"
+                                       % (item.dependent_host_name_string, item.imported_from))
 
         return super(Hostdependencies, self).is_correct() and state

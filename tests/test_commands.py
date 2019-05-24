@@ -106,11 +106,13 @@ class TestCommand(AlignakTest):
 
         # Schedule checks
         svc.schedule(self._scheduler.hosts, self._scheduler.services, self._scheduler.timeperiods,
-                     self._scheduler.macromodulations, self._scheduler.checkmodulations, self._scheduler.checks)
+                     self._scheduler.macromodulations, self._scheduler.checkmodulations,
+                     self._scheduler.checks)
         assert len(svc.actions) == 1
         for action in svc.actions:
             assert action.is_a == 'check'
-            assert action.command == '/usr/lib/nagios/plugins/check_snmp_int.pl -H 127.0.0.1 -C public ' \
+            assert action.command == '/usr/lib/nagios/plugins/check_snmp_int.pl ' \
+                                     '-H 127.0.0.1 -C public ' \
                                      '-n "Nortel Ethernet Routing Switch 5530-24TFD ' \
                                      'Module - Port 2          " ' \
                                      '-r -f -k -Y -B -w "90000,90000" -c "120000,120000"'
@@ -134,7 +136,7 @@ class TestCommand(AlignakTest):
         :return: None
         """
         # No parameters
-        c = Command()
+        c = Command({})
         # No command_name nor command_line attribute exist!
         # Todo: __init__ may raise an exception because of this, no?
         assert getattr(c, 'command_name', None) is None

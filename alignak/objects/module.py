@@ -66,6 +66,7 @@ class Module(Item):
     Class to manage a module
     """
     my_type = 'module'
+    my_name_property = "name"
 
     properties = Item.properties.copy()
     properties.update({
@@ -108,7 +109,7 @@ class Module(Item):
 
     macros = {}
 
-    def __init__(self, params=None, parsing=True):
+    def __init__(self, params, parsing=True):
         # Must be declared in this function rather than as class variable. This because the
         # modules may have some properties that are not the same from one instance to another.
         # Other objects very often have the same properties... but not the modules!
@@ -184,15 +185,6 @@ class Module(Item):
                 getattr(self, 'type', 'Unknown'))
     __str__ = __repr__
 
-    def get_name(self):
-        """
-        Get name of module
-
-        :return: Name of module
-        :rtype: str
-        """
-        return getattr(self, 'name', self.module_alias)
-
     def get_types(self):
         """
         Get types of the module
@@ -224,10 +216,9 @@ class Module(Item):
         """
         res = super(Module, self).serialize()
 
-        cls = self.__class__
         for prop in self.__dict__:
-            if prop in cls.properties or \
-                    prop in cls.running_properties or \
+            if prop in self.__class__.properties or \
+                    prop in self.__class__.running_properties or \
                     prop in ['properties', 'old_properties', 'my_daemon']:
                 continue
             if prop in ['modules'] and getattr(self, prop):
@@ -243,7 +234,6 @@ class Modules(Items):
     Class to manage list of modules
     Modules is used to group all Module
     """
-    name_property = "name"
     inner_class = Module
 
     def linkify(self):
@@ -251,9 +241,9 @@ class Modules(Items):
 
         :return: None
         """
-        self.linkify_s_by_plug()
+        self.linkify_module_by_module()
 
-    def linkify_s_by_plug(self):
+    def linkify_module_by_module(self):
         """Link a module to some other modules
 
         :return: None

@@ -67,6 +67,7 @@ class Command(Item):
     __metaclass__ = AutoSlots
 
     my_type = "command"
+    my_name_property = "%s_name" % my_type
 
     properties = Item.properties.copy()
     properties.update({
@@ -79,49 +80,26 @@ class Command(Item):
         'reactionner_tag':
             StringProp(default=u'None'),
         'module_type':
-            StringProp(default=None),
+            StringProp(default='fork'),
         'timeout':
             IntegerProp(default=-1),
         'enable_environment_macros':
             BoolProp(default=False),
     })
 
-    def __init__(self, params=None, parsing=True):
-
-        if params is None:
-            params = {}
+    def __init__(self, params, parsing=True):
         super(Command, self).__init__(params, parsing=parsing)
 
-        if not hasattr(self, 'timeout'):
-            self.timeout = -1
+        self.fill_default()
 
-        if not hasattr(self, 'enable_environment_macros'):
-            self.enable_environment_macros = False
-        if not hasattr(self, 'poller_tag'):
-            self.poller_tag = u'None'
-        if not hasattr(self, 'reactionner_tag'):
-            self.reactionner_tag = u'None'
-        if not hasattr(self, 'module_type'):
-            # If the command start with a _, set the module_type
-            # as the name of the command, without the _
-            if getattr(self, 'command_line', '').startswith('_'):
-                # For an internal command...
-                self.module_type = u'internal'
-                # module_type = getattr(self, 'command_line', '').split(' ')[0]
-                # # and we remove the first _
-                # self.module_type = module_type[1:]
-            # If no command starting with _, be fork :)
-            else:
-                self.module_type = u'fork'
+        if getattr(self, 'command_line', '').startswith('_'):
+            # For an internal command...
+            self.module_type = u'internal'
 
-    def get_name(self):
-        """
-        Get the name of the command
-
-        :return: the command name string
-        :rtype: str
-        """
-        return self.command_name
+    def __repr__(self):  # pragma: no cover
+        return '<%r %r, command line: %r/>' % \
+               (self.__class__.__name__, self.get_name(), getattr(self, 'command_line', 'Unset'))
+    __str__ = __repr__
 
     def fill_data_brok_from(self, data, brok_type):
         """
@@ -197,6 +175,4 @@ class Commands(Items):
     A command is an external command the poller module run to
     see if something is ok or not
     """
-
     inner_class = Command
-    name_property = "command_name"
