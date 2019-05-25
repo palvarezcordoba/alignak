@@ -3314,8 +3314,7 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
         state = True
 
         if hasattr(self, 'trigger') and getattr(self, 'trigger', None):
-            self.add_warning("[%s::%s] 'trigger' property is not allowed"
-                             % (self.my_type, self.get_name()))
+            self.add_warning("'trigger' property is not allowed")
 
         # If no notif period, set it to None, mean 24x7
         if not hasattr(self, 'notification_period'):
@@ -3325,22 +3324,17 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
         if hasattr(self, 'freshness_threshold') and not self.freshness_threshold:
             if getattr(self, 'check_interval', 0):
                 self.freshness_threshold = self.check_interval * 60
-                # self.add_warning("[%s::%s] using check interval as a freshness threshold: %d s"
-                #                  % (self.my_type, self.get_name(), self.freshness_threshold))
             elif getattr(self, 'retry_interval', 0):
                 self.freshness_threshold = self.retry_interval * 60
-                # self.add_warning("[%s::%s] using retry interval as a freshness threshold: %d s"
-                #                  % (self.my_type, self.get_name(), self.freshness_threshold))
 
         # If we got an event handler, it should be valid
         if getattr(self, 'event_handler', None) and not self.event_handler.is_valid():
-            self.add_error("[%s::%s] event_handler '%s' is invalid"
-                           % (self.my_type, self.get_name(), self.event_handler.command))
+            self.add_error("event_handler '%s' is invalid" % self.event_handler.command)
             state = False
 
         if not hasattr(self, 'check_command'):
             # todo: This should never happen because the default exists as an empty string
-            self.add_error("[%s::%s] no property check_command" % (self.my_type, self.get_name()))
+            self.add_error("no check_command property")
             state = False
         # Ok got a command, but maybe it's invalid
         else:
@@ -3348,29 +3342,25 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
             #     self.add_warning("[%s::%s] no check_command, will always be considered as Up"
             #                      % (self.my_type, self.get_name()))
             if self.check_command and not self.check_command.is_valid():
-                self.add_error("[%s::%s] check_command '%s' invalid"
-                               % (self.my_type, self.get_name(), self.check_command.command))
+                self.add_error("check_command '%s' invalid" % self.check_command.command)
                 state = False
             if self.got_business_rule:
                 if not self.business_rule.is_valid():
-                    self.add_error("[%s::%s] business_rule invalid"
-                                   % (self.my_type, self.get_name()))
+                    self.add_error("business_rule invalid")
                     for bperror in self.business_rule.configuration_errors:
-                        self.add_error("[%s::%s]: %s" % (self.my_type, self.get_name(), bperror))
+                        self.add_error(": %s" % bperror)
                     state = False
 
         if not hasattr(self, 'notification_interval') \
-                and self.notifications_enabled is True:  # pragma: no cover, should never happen
-            self.add_error("[%s::%s] no notification_interval but notifications enabled"
-                           % (self.my_type, self.get_name()))
+                and getattr(self, 'notifications_enabled', None) is True:
+            self.add_error("no notification_interval but notifications enabled")
             state = False
 
         # if no check_period, means 24x7, like for services
         if not hasattr(self, 'check_period'):
             self.check_period = None
 
-        state = super(SchedulingItem, self).is_correct()
-        return state
+        return super(SchedulingItem, self).is_correct() and state
 
 
 class SchedulingItems(CommandCallItems):

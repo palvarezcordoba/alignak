@@ -259,8 +259,8 @@ class Host(SchedulingItem):  # pylint: disable=too-many-public-methods
         # self.fill_default()
 
     def __str__(self):  # pragma: no cover
-        return '<Host %s %s, uuid=%s, %s (%s), realm: %s, use: %s />' \
-               % ('template' if self.is_a_template() else '', self.get_full_name(), self.uuid,
+        return '<Host%s %s, uuid=%s, %s (%s), realm: %s, use: %s />' \
+               % (' template' if self.is_a_template() else '', self.get_full_name(), self.uuid,
                   self.state, self.state_type, getattr(self, 'realm', 'Unset'),
                   getattr(self, 'use', None))
     __repr__ = __str__
@@ -334,11 +334,10 @@ class Host(SchedulingItem):  # pylint: disable=too-many-public-methods
 
         # Internal checks before executing inherited function...
         cls = self.__class__
-        if hasattr(self, 'host_name'):
+        if getattr(self, 'host_name', ''):
             for char in cls.illegal_object_name_chars:
                 if char in self.host_name:
-                    self.add_error("[%s::%s] host_name contains an illegal character: %s"
-                                   % (self.my_type, self.get_name(), char))
+                    self.add_error("host_name contains an illegal character: %s" % char)
                     state = False
 
         # Fred: do not alert about missing check_command for an host... this because 1/ it is
@@ -347,10 +346,9 @@ class Host(SchedulingItem):  # pylint: disable=too-many-public-methods
         #     self.add_warning("[%s::%s] has no defined check command"
         #                      % (self.my_type, self.get_name()))
 
-        if self.notifications_enabled and not self.contacts:
-            self.add_warning("[%s::%s] notifications are enabled but no contacts nor "
-                             "contact_groups property is defined for this host"
-                             % (self.my_type, self.get_name()))
+        if getattr(self, 'notifications_enabled', None) and not getattr(self, 'contacts', None):
+            self.add_warning("notifications are enabled but no contacts nor "
+                             "contact_groups property is defined for this host")
 
         return super(Host, self).is_correct() and state
 
@@ -1506,5 +1504,9 @@ class Hosts(SchedulingItems):
                     elif elem in item.parents:
                         self.add_error("Host %s is child in dependency defined in %s"
                                        % (self[elem].get_name(), self[elem].imported_from))
+
+        for item_uuid in self.templates:
+            template = self.templates[item_uuid]
+            state = template.is_correct() and state
 
         return super(Hosts, self).is_correct() and state

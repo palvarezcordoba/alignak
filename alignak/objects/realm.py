@@ -189,13 +189,13 @@ class Realm(Itemgroup):
             setattr(self, "nb_%ss" % sat_type, 0)
             setattr(self, 'potential_%ss' % sat_type, [])
 
-    def __repr__(self):
-        res = '<%r %r (%d)' % (self.__class__.__name__, self.get_name(), self.level)
+    def __str__(self):
+        res = '<Realm %s (%d)' % (self.get_name(), self.level)
         if self.realm_members:
-            res = res + ', %d sub-realms: %r' \
+            res = res + ', %d sub-realms: %s' \
                         % (len(self.realm_members), ', '.join([str(s) for s in self.realm_members]))
             if self.all_sub_members_names:
-                res = res + ', %d all sub-realms: %r' \
+                res = res + ', %d all sub-realms: %s' \
                             % (len(self.all_sub_members_names),
                                ', '.join([str(s) for s in self.all_sub_members_names]))
         if self.hosts_count:
@@ -205,7 +205,7 @@ class Realm(Itemgroup):
         if getattr(self, 'packs', None):
             res = res + ', %d packs' % len(self.packs)
         return res + '/>'
-    __str__ = __repr__
+        __repr__ = __str__
 
     @property
     def name(self):

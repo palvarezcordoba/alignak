@@ -195,9 +195,31 @@ class Contact(Item):
         # self.fill_default()
 
     def __str__(self):  # pragma: no cover
-        return '<Contact %s, uuid=%s, use: %s />' \
-               % (self.get_name(), self.uuid, getattr(self, 'use', None))
+        return '<Contact%s %s, uuid=%s, use: %s />' \
+               % (' template' if self.is_a_template() else '', self.get_full_name(), self.uuid,
+                  getattr(self, 'use', None))
     __repr__ = __str__
+
+    def get_name(self, index=False):
+        """Get the name of the contact
+
+        :return: contact name
+        :rtype: str
+        """
+        return getattr(self, 'contact_name', 'Unnamed')
+
+    def get_full_name(self):
+        """Get the full name of the contact
+
+        :return: service full name
+        :rtype: str
+        """
+        name = self.get_name()
+        if getattr(self, 'display_name', None):
+            name = "({}) {}".format(getattr(self, 'display_name'), name)
+        elif getattr(self, 'alias', None) and getattr(self, 'alias', None) != 'none':
+            name = "({}) {}".format(getattr(self, 'alias'), name)
+        return name
 
     def serialize(self):
         res = super(Contact, self).serialize()

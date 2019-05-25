@@ -2309,14 +2309,17 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
 
         :return: None
         """
-        self.hosts.linkify_templates()
-        self.contacts.linkify_templates()
-        self.services.linkify_templates()
-        self.servicedependencies.linkify_templates()
-        self.hostdependencies.linkify_templates()
         self.timeperiods.linkify_templates()
+        self.contacts.linkify_templates()
+
+        self.hosts.linkify_templates()
+        self.services.linkify_templates()
+        self.hostdependencies.linkify_templates()
+        self.servicedependencies.linkify_templates()
+
         self.hostsextinfo.linkify_templates()
         self.servicesextinfo.linkify_templates()
+
         self.escalations.linkify_templates()
         # But also old srv and host escalations
         self.serviceescalations.linkify_templates()
@@ -2399,15 +2402,13 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
 
         # If we got global event handlers, they should be valid
         if self.global_host_event_handler and not self.global_host_event_handler.is_valid():
-            msg = "[%s::%s] global host event_handler '%s' is invalid" \
-                  % (self.my_type, self.get_name(), self.global_host_event_handler.command)
-            self.add_error(msg)
+            self.add_error("global host event_handler '%s' is invalid"
+                           % self.global_host_event_handler.command)
             valid = False
 
         if self.global_service_event_handler and not self.global_service_event_handler .is_valid():
-            msg = "[%s::%s] global service event_handler '%s' is invalid" \
-                  % (self.my_type, self.get_name(), self.global_service_event_handler .command)
-            self.add_error(msg)
+            self.add_error("global service event_handler '%s' is invalid"
+                           % self.global_service_event_handler.command)
             valid = False
 
         if not self.read_config_silent:
@@ -2418,6 +2419,7 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
 
         classes = [strclss for _, _, strclss, _, _ in list(self.types_creations.values())]
         for strclss in sorted(classes):
+            # todo: check why ignored!
             if strclss in ['hostescalations', 'serviceescalations']:
                 logger.debug("Ignoring correctness check for '%s'...", strclss)
                 continue
@@ -2660,14 +2662,14 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
         # Now we look if all elements of all packs have the
         # same realm. If not, not good!
         for hosts_pack in graph.get_accessibility_packs():
-            print(" hosts pack- %s " % (hosts_pack))
             passively_checked_hosts = False
             actively_checked_hosts = False
             tmp_realms = set()
             logger.debug(" - host pack hosts:")
             for host_id in hosts_pack:
                 host = self.hosts[host_id]
-                print(" pack host - %s / %s" % (host_id, host))
+                if not host:
+                    continue
                 logger.debug("  - %s", host.get_name())
                 passively_checked_hosts = passively_checked_hosts or host.passive_checks_enabled
                 actively_checked_hosts = actively_checked_hosts or host.active_checks_enabled
@@ -2794,6 +2796,8 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                 old_pack = -1
                 for host_id in hosts_pack:
                     host = self.hosts[host_id]
+                    if not host:
+                        continue
                     old_i = assoc.get(host.get_name(), -1)
                     # Maybe it's a new, if so, don't count it
                     if old_i == -1:
@@ -2819,6 +2823,8 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
 
                 for host_id in hosts_pack:
                     host = self.hosts[host_id]
+                    if not host:
+                        continue
                     packs[packindices[i]].append(host_id)
                     assoc[host.get_name()] = i
 

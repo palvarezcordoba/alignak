@@ -191,8 +191,7 @@ class Itemgroup(Item):
 
         if self.unknown_members:
             for member in self.unknown_members:
-                self.add_error("[%s::%s] as %s, got unknown member '%s'"
-                               % (self.my_type, self.get_name(), self.__class__.my_type, member))
+                self.add_error("as %s, got unknown member '%s'" % (self.__class__.my_type, member))
             state = False
 
         return super(Itemgroup, self).is_correct() and state

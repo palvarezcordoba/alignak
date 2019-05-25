@@ -226,17 +226,17 @@ class Timeperiod(Item):
         :return: this object in readable format
         :rtype: str
         """
-        string = ''
-        string += str(self.__dict__) + '\n'
+        string = str(self.__dict__) + '\n'
         for elt in self.dateranges:
             string += str(elt)
             (start, end) = elt.get_start_and_end_time()
             start = time.asctime(time.localtime(start))
             end = time.asctime(time.localtime(end))
             string += "\nStart and end:" + str((start, end))
-        string += '\nExclude'
-        for elt in self.exclude:
-            string += str(elt)
+        if getattr(self, 'exclude'):
+            string += '\nExclude'
+            for elt in self.exclude:
+                string += str(elt)
 
         return string
 

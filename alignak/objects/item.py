@@ -495,7 +495,7 @@ class Item(AlignakObject):
         :type txt: str
         :return: None
         """
-        self.configuration_errors.append(txt)
+        self.configuration_errors.append("[{}::{}] {}".format(self.my_type, self.get_name(), txt))
         self.conf_is_correct = False
 
     def add_warning(self, txt):
@@ -506,7 +506,7 @@ class Item(AlignakObject):
         :type txt: str
         :return: None
         """
-        self.configuration_warnings.append(txt)
+        self.configuration_warnings.append("[{}::{}] {}".format(self.my_type, self.get_name(), txt))
 
     def is_correct(self):
         """
@@ -524,8 +524,7 @@ class Item(AlignakObject):
                 continue
 
             if not hasattr(self, prop) and entry.required:
-                self.add_error("[%s::%s] %s property is missing"
-                               % (self.my_type, self.get_name(), prop))
+                self.add_error("%s required property is missing" % prop)
 
         return self.conf_is_correct
 
@@ -766,7 +765,7 @@ class Item(AlignakObject):
 
 class Items(object):
     """
-    Class to manage all Item
+    Class to manage all Item objects of the same type
     """
 
     inner_class = Item
@@ -874,10 +873,10 @@ class Items(object):
         for item in items:
             if item.is_a_template():
                 self.add_template(item)
-                count_templates = count_templates + 1
+                count_templates += 1
             else:
                 new_items = self.add_item(item, index_items)
-                count_items = count_items + max(1, len(new_items))
+                count_items += max(1, len(new_items))
                 if new_items:
                     generated_items.extend(new_items)
         if count_templates:
@@ -905,32 +904,41 @@ class Items(object):
         :return: 'item' parameter modified
         :rtype: object
         """
-        if item.is_a_template():
-            existing = self.name_to_template[name]
-        else:
-            existing = self.name_to_item[name]
+        existing = self.name_to_template[name] if item.is_a_template() else self.name_to_item[name]
         if existing == item:
             return item
 
+        # Get (and set) the definition order if any else the default values
         existing_prio = getattr(existing, "definition_order",
                                 existing.properties["definition_order"].default)
+        existing.definition_order = existing_prio
         item_prio = getattr(item, "definition_order",
                             item.properties["definition_order"].default)
+        item.definition_order = item_prio
 
         if existing_prio < item_prio:
             # Existing item has lower priority, so it has precedence.
+            logger.info("naming conflict, I kept the existing object: %s, "
+                        "definition order: %d, imported from: %s and I rejected: %s, "
+                        "definition order: %d, imported from: %s",
+                        existing.get_name(), existing.definition_order, existing.imported_from,
+                        item.get_name(), item.definition_order, item.imported_from)
             return existing
         if existing_prio > item_prio:
             # New item has lower priority, so it has precedence.
             # Existing item will be deleted below
-            pass
+            logger.info("naming conflict, I kept the most recent object: %s, "
+                        "definition order: %d, imported from: %s and I rejected the existing: %s, "
+                        "definition order: %d, imported from: %s",
+                        item.get_name(), item.definition_order, item.imported_from,
+                        existing.get_name(), existing.definition_order, existing.imported_from)
         else:
             # Don't know which one to keep, lastly defined has precedence
             objcls = getattr(self.inner_class, "my_type", "[unknown]")
-            item.configuration_warnings.append(
-                "duplicate %s '%s', from: '%s' and '%s', using lastly defined. "
-                "You may manually set the definition_order parameter to avoid this message."
-                % (objcls, name, item.imported_from, existing.imported_from))
+            item.add_warning("duplicate %s '%s', from: '%s' and '%s', using lastly defined. "
+                             "You may manually set the definition_order parameter to avoid "
+                             "this message."
+                             % (objcls, name, item.imported_from, existing.imported_from))
         if item.is_a_template():
             self.remove_template(existing)
         else:
@@ -952,10 +960,15 @@ class Items(object):
         """
         Indexes a template by `name` into the `name_to_template` dictionary.
 
+        If an object holding the same item's name/key already exists in the index
+        then the conflict is managed by the `manage_conflict` method.
+
         :param template: The template to index
         :type template: alignak.objects.item.Item
         :return: None
         """
+        if template.my_type in ['hostdependency', 'servicedependency']:
+            print("New template: %s" % template)
         name = template.get_name(index=True)
         if not name:
             template.add_error("a %s template has been defined without name, from: %s"
@@ -977,11 +990,9 @@ class Items(object):
         :type template: alignak.objects.item.Item
         :return: None
         """
-        try:
-            del self.templates[template.uuid]
-        except KeyError:  # pragma: no cover, simple protection
-            pass
+        logger.info("Removing template: %s", template.get_name())
         self.unindex_template(template)
+        self.templates.pop(template.uuid, None)
 
     def unindex_template(self, template):
         """
@@ -1079,6 +1090,7 @@ class Items(object):
         :type item: alignak.objects.item.Item
         :return: None
         """
+        logger.info("Removing item: %s", item.get_name())
         self.unindex_item(item)
         self.items.pop(item.uuid, None)
 
@@ -1182,16 +1194,16 @@ class Items(object):
         :return: None
         """
         item.templates = []
-        for name in item.get_templates():
-            template = self.find_by_name(name, template=True)
+        for template_name in item.get_templates():
+            template = self.find_by_name(template_name, template=True)
             if not template:
-                self.add_warning("%s %s use/inherit from an unknown template: %s ! from: %s"
-                                 % (type(item).__name__, item.get_name(), name, item.imported_from))
+                item.add_warning("use/inherit from an unknown template: %s! from: %s"
+                                 % (template_name, item.imported_from))
                 continue
 
             if template is item:
-                self.add_error("%s %s use/inherits from itself ! from: %s"
-                               % (type(item).__name__, item._get_name(), item.imported_from))
+                print("I: %s / %s" % (item, template is item))
+                item.add_error("use/inherits from itself; from: %s" % item.imported_from)
                 continue
 
             if template.uuid not in item.templates:
@@ -1203,12 +1215,14 @@ class Items(object):
 
         :return: None
         """
+        print("...")
         # First we create a list of all templates
         for item in itertools.chain(iter(list(self.items.values())),
                                     iter(list(self.templates.values()))):
             self.linkify_item_templates(item)
+            print("...: %s\n%s" % (item, item.configuration_errors))
 
-        # Set the templates names list as tags
+        # Set the templates names list as tags in the items
         for item in self:
             item.tags = self.get_all_tags(item)
 
@@ -1229,10 +1243,10 @@ class Items(object):
 
         # Better check individual items before displaying the global items list errors and warnings
         for item in self:
+            print("? %s" % item)
             if not item.is_correct():
                 self.conf_is_correct = False
-                item.add_error("Configuration in %s::%s is incorrect; from: %s"
-                               % (item.my_type, item.get_name(), item.imported_from))
+                item.add_error("Configuration is incorrect; from: %s" % item.imported_from)
 
             if item.configuration_errors:
                 self.add_error(item.configuration_errors)
@@ -1242,12 +1256,12 @@ class Items(object):
         # Raise all previous warnings
         # if self.configuration_warnings:
         for msg in self.configuration_warnings:
-            logger.warning("[items] %s", msg)
+            logger.warning(msg)
 
         # Raise all previous errors
         # if self.configuration_errors:
         for msg in self.configuration_errors:
-            logger.error("[items] %s", msg)
+            logger.error(msg)
 
         return self.conf_is_correct
 
@@ -1482,8 +1496,7 @@ class Items(object):
             # Ok, get a real name, search for it
             timeperiod = timeperiods.find_by_name(tpname)
             if timeperiod is None:
-                i.add_error("The %s of the %s '%s' named '%s' is unknown!"
-                            % (prop, i.__class__.my_type, i.get_name(), tpname))
+                i.add_error("The %s named '%s' is unknown!" % (prop, tpname))
                 continue
 
             setattr(i, prop, timeperiod.uuid)

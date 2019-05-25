@@ -93,8 +93,8 @@ class TestEndParsingType(AlignakTest):
                 return
 
             assert isinstance(value, obj_expected_type), \
-                "The %s attr/property of %s object isn't a %s: %s, value=%s" \
-                % (prop, obj, obj_expected_type, value.__class__, value)
+                "The %s property isn't a %s: %s, value=%s, for: %s" \
+                % (prop, obj_expected_type, value.__class__, value, obj)
 
     @staticmethod
     def map_type(obj):

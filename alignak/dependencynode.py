@@ -736,7 +736,7 @@ class DependencyNodeFactory(object):
             error = "Business rule uses invalid regex %s: %s" % (pattern, regerr)
         else:
             if not items:
-                error = "Business rule got an empty result for pattern %s" % pattern
+                error = "Business rule got an empty result for pattern '%s'" % pattern
 
         # Checks if we got result
         if error:

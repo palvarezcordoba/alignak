@@ -352,10 +352,10 @@ class TestConfig(AlignakTest):
         assert not self.conf_is_correct
 
         self.assert_any_cfg_log_match(re.escape(
-            "Configuration in host::test_host_1 is incorrect"
+            "[host::test_host_1] Configuration is incorrect"
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "A + value for a single string (display_name) is not handled"
+            "[host::Unnamed] A + value for a single string (display_name) is not handled"
         ))
         self.assert_any_cfg_log_match(re.escape(
             "hosts configuration is incorrect!"
@@ -374,10 +374,10 @@ class TestConfig(AlignakTest):
         assert not self.conf_is_correct
 
         self.assert_any_cfg_log_match(re.escape(
-            "Configuration in host::test_host_1 is incorrect"
+            "[host::test_host_1] Configuration is incorrect"
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "A + value for a single string (_macro_list_plus) is not handled"
+            "[host::Unnamed] A + value for a single string (_macro_list_plus) is not handled"
         ))
         self.assert_any_cfg_log_match(re.escape(
             "hosts configuration is incorrect!"
@@ -536,7 +536,7 @@ class TestConfig(AlignakTest):
         #               self.configuration_errors
 
         self.assert_any_cfg_log_match(re.escape(
-            "Configuration in service::will_error is incorrect; "
+            "[service::will_error] Configuration is incorrect; "
         ))
         self.assert_any_cfg_log_match(re.escape(
             "[service::will_error] unknown host_name 'NOEXIST'"
@@ -562,11 +562,10 @@ class TestConfig(AlignakTest):
         """
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/cfg_bad_host_template_itself.cfg')
+            self.show_logs()
         assert not self.conf_is_correct
-        # TODO, issue #344
-        self.assert_any_cfg_log_match(
-            "Host bla use/inherits from itself !"
-        )
+        # TODO, the problem is really detected but no error is raised :/
+        self.assert_any_cfg_log_match("Host bla use/inherits from itself !")
 
     def test_use_undefined_template(self):
         """ Test unknown template detection for host and service
@@ -574,15 +573,16 @@ class TestConfig(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_bad_undefined_template.cfg')
+        self.show_logs()
         assert self.conf_is_correct
 
         # TODO, issue #344
-        self.assert_any_cfg_log_match(
-            "Host test_host use/inherit from an unknown template: undefined_host ! "
-        )
-        self.assert_any_cfg_log_match(
-            "Service test_service use/inherit from an unknown template: undefined_service ! "
-        )
+        self.assert_any_cfg_log_match(re.escape(
+            "[host::test_host] use/inherit from an unknown template: undefined_host! "
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::test_service] use/inherit from an unknown template: undefined_service! "
+        ))
 
     def test_broken_configuration(self):
         """ Configuration is not correct because of a wrong relative path in the main config file
@@ -790,12 +790,12 @@ class TestConfig(AlignakTest):
         print("Svc:", svc)
         print("Contacts:", svc.contacts)
         assert not svc.is_correct()
-        self.assert_any_cfg_log_match(
-            "Configuration in service::test_ok_0_badcon is incorrect; from: "
-        )
-        self.assert_any_cfg_log_match(
-            "the contact 'IDONOTEXIST' defined for 'test_ok_0_badcon' is unknown"
-        )
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::test_ok_0_badcon] Configuration is incorrect; from: "
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::test_ok_0_badcon] the contact 'IDONOTEXIST' defined for 'test_ok_0_badcon' is unknown"
+        ))
 
     def test_bad_notification_period(self):
         """ Configuration is not correct because of an unknown notification_period in a service
@@ -807,13 +807,13 @@ class TestConfig(AlignakTest):
         assert not self.conf_is_correct
         self.show_configuration_logs()
 
-        self.assert_any_cfg_log_match(
-            "Configuration in service::test_ok_0_badperiod is incorrect; from: "
-        )
-        self.assert_any_cfg_log_match(
-            "The notification_period of the service 'test_ok_0_badperiod' "
-            "named 'IDONOTEXIST' is unknown!"
-        )
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::test_ok_0_badperiod] Configuration is incorrect; from:"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::test_ok_0_badperiod] The notification_period of the service "
+            "'test_ok_0_badperiod' named 'IDONOTEXIST' is unknown!"
+        ))
 
     def test_bad_realm_conf(self):
         """ Configuration is not correct because of an unknown realm member in realm and
@@ -892,7 +892,7 @@ class TestConfig(AlignakTest):
         self.assert_any_cfg_log_match(re.escape(
             "[realm::Realm4] as realm, got unknown member 'UNKNOWN_REALM'"))
         self.assert_any_cfg_log_match(re.escape(
-            "Configuration in realm::Realm4 is incorrect; from: "))
+            "[realm::Realm4] Configuration is incorrect; from:"))
         self.assert_any_cfg_log_match(re.escape(
             "realms configuration is incorrect!"))
         self.assert_any_cfg_log_match(re.escape(
@@ -919,36 +919,36 @@ class TestConfig(AlignakTest):
         self.show_configuration_logs()
 
         self.assert_any_cfg_log_match(re.escape(
-            "Configuration in service::Simple_1Of_1unk_host is incorrect; "
+            "[service::Simple_1Of_1unk_host] Configuration is incorrect; "
         ))
         self.assert_any_cfg_log_match(re.escape(
             "[service::Simple_1Of_1unk_host] business_rule invalid"
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "[service::Simple_1Of_1unk_host]: Business rule uses unknown host test_host_9"
+            "[service::Simple_1Of_1unk_host] : Business rule uses unknown host test_host_9"
         ))
 
         self.assert_any_cfg_log_match(re.escape(
-            "Configuration in service::Simple_1Of_1unk_svc is incorrect; "
+            "[service::Simple_1Of_1unk_svc] Configuration is incorrect; "
         ))
         self.assert_any_cfg_log_match(re.escape(
             "[service::Simple_1Of_1unk_svc] business_rule invalid"
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "[service::Simple_1Of_1unk_svc]: Business rule uses unknown service test_host_0/db3"
+            "[service::Simple_1Of_1unk_svc] : Business rule uses unknown service test_host_0/db3"
         ))
 
         self.assert_any_cfg_log_match(re.escape(
-            "Configuration in service::ERP_unk_svc is incorrect; "
+            "[service::ERP_unk_svc] Configuration is incorrect; "
         ))
         self.assert_any_cfg_log_match(re.escape(
             "[service::ERP_unk_svc] business_rule invalid"
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "[service::ERP_unk_svc]: Business rule uses unknown service test_host_0/web100"
+            "[service::ERP_unk_svc] : Business rule uses unknown service test_host_0/web100"
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "[service::ERP_unk_svc]: Business rule uses unknown service test_host_0/lvs100"
+            "[service::ERP_unk_svc] : Business rule uses unknown service test_host_0/lvs100"
         ))
 
         self.assert_any_cfg_log_match(re.escape(
@@ -963,43 +963,43 @@ class TestConfig(AlignakTest):
         self.show_configuration_logs()
 
         self.assert_any_cfg_log_match(re.escape(
-            "Configuration in service::bprule_invalid_regex is incorrect; "
+            "[service::bprule_empty_regex] Configuration is incorrect; "
         ))
         self.assert_any_cfg_log_match(re.escape(
             "[service::bprule_invalid_regex] business_rule invalid"
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "[service::bprule_invalid_regex]: Business rule uses invalid regex"
+            "[service::bprule_invalid_regex] : Business rule uses invalid regex"
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "Configuration in service::bprule_empty_regex is incorrect; "
+            "[service::bprule_empty_regex] Configuration is incorrect; "
         ))
         self.assert_any_cfg_log_match(re.escape(
             "[service::bprule_empty_regex] business_rule invalid"
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "[service::bprule_empty_regex]: Business rule got an empty result "
-            "for pattern r:fake,srv1"
+            "[service::bprule_empty_regex] : Business rule got an empty result "
+            "for pattern 'r:fake,srv1'"
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "Configuration in service::bprule_unkonwn_service is incorrect; "
+            "[service::bprule_unkonwn_service] Configuration is incorrect; "
         ))
         self.assert_any_cfg_log_match(re.escape(
             "[service::bprule_unkonwn_service] business_rule invalid"
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "[service::bprule_unkonwn_service]: Business rule got an empty result "
-            "for pattern g:hostgroup_01,srv3"
+            "[service::bprule_unkonwn_service] : Business rule got an empty result "
+            "for pattern 'g:hostgroup_01,srv3'"
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "Configuration in service::bprule_unkonwn_hostgroup is incorrect; "
+            "[service::bprule_unkonwn_hostgroup] Configuration is incorrect; "
         ))
         self.assert_any_cfg_log_match(re.escape(
             "[service::bprule_unkonwn_hostgroup] business_rule invalid"
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "[service::bprule_unkonwn_hostgroup]: Business rule got an empty result "
-            "for pattern g:hostgroup_03,srv1"
+            "[service::bprule_unkonwn_hostgroup] : Business rule got an empty result "
+            "for pattern 'g:hostgroup_03,srv1'"
         ))
 
         self.assert_any_cfg_log_match(re.escape(
@@ -1038,18 +1038,18 @@ class TestConfig(AlignakTest):
 
         # assert len(self.configuration_errors) == 9
         self.assert_any_cfg_log_match(re.escape(
-            "hostgroup up got the default realm but it has some hosts that are from different "
+            "[hostgroup::up] got the default realm but it has some hosts that are from different "
             "realms: "
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "Configuration in hostgroup::up is incorrect; from:"
+            "[hostgroup::up] Configuration is incorrect; from:"
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "hostgroup hostgroup_01 got the default realm but it has some hosts that are from "
+            "[hostgroup::hostgroup_01] got the default realm but it has some hosts that are from "
             "different realms: "
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "Configuration in hostgroup::hostgroup_01 is incorrect; from:"
+            "[hostgroup::hostgroup_01] Configuration is incorrect; from:"
         ))
         self.assert_any_cfg_log_match(re.escape(
             "hostgroups configuration is incorrect!"
@@ -1103,12 +1103,12 @@ class TestConfig(AlignakTest):
         assert not self.conf_is_correct
         self.show_configuration_logs()
 
-        self.assert_any_cfg_log_match(
-            "Configuration in service::fake svc1 is incorrect; from: "
-        )
-        self.assert_any_cfg_log_match(
-            r"Error while pythonizing parameter \'check_interval\': "
-        )
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::fake svc1] Configuration is incorrect; from:"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            r"[service::Unnamed] Error while pythonizing parameter 'check_interval': "
+        ))
 
     def test_config_contacts(self):
         """ Test contacts configuration
@@ -1251,8 +1251,7 @@ class TestConfig(AlignakTest):
         # No error messages
         assert len(self.configuration_errors) == 0
         # No warning messages
-        print(self.configuration_warnings)
-        assert len(self.configuration_warnings) == 1
+        assert len(self.configuration_warnings) == 0
 
         host0 = self._arbiter.conf.hosts.find_by_name('host_A')
         host1 = self._arbiter.conf.hosts.find_by_name('host_B')
@@ -1290,28 +1289,28 @@ class TestConfig(AlignakTest):
         assert not self.conf_is_correct
 
         # MM without macro definition
-        self.assert_any_cfg_log_match(
-            "Configuration in macromodulation::MODULATION2 is incorrect; "
-        )
-        self.assert_any_cfg_log_match(
-            "The modulation_period of the macromodulation 'MODULATION2' named '24x7' is unknown!"
-        )
+        self.assert_any_cfg_log_match(re.escape(
+            "[macromodulation::MODULATION2] Configuration is incorrect; "
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[macromodulation::MODULATION2] The modulation_period named '24x7' is unknown!"
+        ))
         self.assert_any_cfg_log_match(re.escape(
             "[macromodulation::MODULATION2] contains no macro definition"
         ))
 
         # MM without name
-        self.assert_any_cfg_log_match(
-            "Configuration in macromodulation::Unnamed is incorrect; "
-        )
+        self.assert_any_cfg_log_match(re.escape(
+            "[macromodulation::Unnamed] Configuration is incorrect; "
+        ))
         # self.assert_any_cfg_log_match(
         #     "a macromodulation item has been defined without macromodulation_name, "
         # )
-        self.assert_any_cfg_log_match(
-            "The modulation_period of the macromodulation 'Unnamed' named '24x7' is unknown!"
-        )
         self.assert_any_cfg_log_match(re.escape(
-            "[macromodulation::Unnamed] macromodulation_name property is missing"
+            "[macromodulation::Unnamed] The modulation_period named '24x7' is unknown!"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[macromodulation::Unnamed] macromodulation_name required property is missing"
         ))
         self.assert_any_cfg_log_match(
             "macromodulations configuration is incorrect!"
@@ -1327,25 +1326,25 @@ class TestConfig(AlignakTest):
         assert not self.conf_is_correct
 
         # CM without check_command definition
-        self.assert_any_cfg_log_match(
-            "Configuration in checkmodulation::MODULATION is incorrect; "
-        )
+        self.assert_any_cfg_log_match(re.escape(
+            "[checkmodulation::MODULATION] Configuration is incorrect; "
+        ))
         self.assert_any_cfg_log_match(re.escape(
             "[checkmodulation::MODULATION] a check_command is missing"
         ))
 
         # MM without name
-        self.assert_any_cfg_log_match(
-             "Configuration in checkmodulation::Unnamed is incorrect; "
-        )
+        self.assert_any_cfg_log_match(re.escape(
+             "[checkmodulation::Unnamed] Configuration is incorrect; "
+        ))
         # self.assert_any_cfg_log_match(
         #     "a checkmodulation item has been defined without checkmodulation_name, "
         # )
-        self.assert_any_cfg_log_match(
-            "The check_period of the checkmodulation 'Unnamed' named '24x7' is unknown!"
-        )
         self.assert_any_cfg_log_match(re.escape(
-            "[checkmodulation::Unnamed] checkmodulation_name property is missing"
+            "[checkmodulation::Unnamed] The check_period named '24x7' is unknown!"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[checkmodulation::Unnamed] checkmodulation_name required property is missing"
         ))
         self.assert_any_cfg_log_match(
              "checkmodulations configuration is incorrect!"
@@ -1361,29 +1360,27 @@ class TestConfig(AlignakTest):
         assert not self.conf_is_correct
 
         # MM without macro definition
-        self.assert_any_cfg_log_match(
-            "Configuration in businessimpactmodulation::CritMod is incorrect; "
-        )
         self.assert_any_cfg_log_match(re.escape(
-            "[businessimpactmodulation::CritMod] business_impact property is missing"
+            "[businessimpactmodulation::CritMod] The modulation_period named '24x7' is unknown!"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[businessimpactmodulation::CritMod] Configuration is incorrect; from: "
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[businessimpactmodulation::CritMod] business_impact required property is missing"
         ))
 
         # BIM without name
         self.assert_any_cfg_log_match(re.escape(
-            "[businessimpactmodulation::Unnamed] business_impact_modulation_name property "
+            "[businessimpactmodulation::Unnamed] The modulation_period named '24x7' is unknown!"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[businessimpactmodulation::Unnamed] business_impact_modulation_name required property "
             "is missing"
         ))
-        self.assert_any_cfg_log_match(
-            "Configuration in businessimpactmodulation::Unnamed is incorrect; "
-        )
-        # self.assert_any_cfg_log_match(
-        #     "a businessimpactmodulation item has been defined without "
-        #     "business_impact_modulation_name, from: "
-        # )
-        # self.assert_any_cfg_log_match(
-        #     "The modulation_period of the businessimpactmodulation 'Unnamed' "
-        #     "named '24x7' is unknown!"
-        # )
+        self.assert_any_cfg_log_match(re.escape(
+            "[businessimpactmodulation::Unnamed] Configuration is incorrect; "
+        ))
         self.assert_any_cfg_log_match(re.escape(
             "businessimpactmodulations configuration is incorrect!"
         ))

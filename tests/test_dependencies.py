@@ -220,8 +220,7 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_dependencies.cfg',
-                             dispatching=True)
+        self.setup_with_file('cfg/cfg_dependencies.cfg', dispatching=True)
         assert self.conf_is_correct
         self.show_logs()
         assert len(self.configuration_errors) == 0
@@ -404,12 +403,12 @@ class TestDependencies(AlignakTest):
         """
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad1.cfg')
-        # self.show_logs()
+
         self.assert_any_cfg_log_match(re.escape(
-                "Configuration in hostdependency::unknown/unknown is incorrect"
+                "got a bad dependent_host_name definition"
         ))
         self.assert_any_cfg_log_match(re.escape(
-                "Error: the host dependency got a bad dependent_host_name definition"
+                "Configuration is incorrect"
         ))
         self.assert_any_cfg_log_match(re.escape(
                 "hostdependencies configuration is incorrect!"
@@ -425,12 +424,12 @@ class TestDependencies(AlignakTest):
         """
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad2.cfg')
-        self.show_logs()
+
         self.assert_any_cfg_log_match(re.escape(
-                "Configuration in hostdependency::unknown/unknown is incorrect"
+                "got a bad host_name definition"
         ))
         self.assert_any_cfg_log_match(re.escape(
-                "Error: the host dependency got a bad host_name definition"
+                "Configuration is incorrect"
         ))
         self.assert_any_cfg_log_match(re.escape(
                 "hostdependencies configuration is incorrect!"
@@ -540,12 +539,12 @@ class TestDependencies(AlignakTest):
         """
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad8.cfg')
-        self.show_logs()
+
         self.assert_any_cfg_log_match(re.escape(
-                "Configuration in hostdependency::unknown/unknown is incorrect"
+                "got a bad dependent_host_name definition 'test_host_X'"
         ))
         self.assert_any_cfg_log_match(re.escape(
-                "Error: the host dependency got a bad dependent_host_name definition 'test_host_X'"
+                "Configuration is incorrect"
         ))
         self.assert_any_cfg_log_match(re.escape(
                 "hostdependencies configuration is incorrect!"
@@ -1469,12 +1468,12 @@ class TestDependencies(AlignakTest):
         for s in self._scheduler.services:
             print(s.get_full_name())
 
-        NRPE = self._scheduler.services.\
-            find_srv_by_name_and_hostname("myspecifichost", "NRPE")
+        NRPE = self._scheduler.services.find_srv_by_name_and_hostname("myspecifichost", "NRPE")
         assert NRPE is not None
-        Load = self._scheduler.services.\
-            find_srv_by_name_and_hostname("myspecifichost", "Load")
+        Load = self._scheduler.services.find_srv_by_name_and_hostname("myspecifichost", "Load")
         assert Load is not None
 
         # Direct service dependency definition is valid ...
+        for e in Load.act_depend_of:
+            print(e)
         assert NRPE.uuid in [e[0] for e in Load.act_depend_of]

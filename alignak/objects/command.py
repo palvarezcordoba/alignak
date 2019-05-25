@@ -96,10 +96,10 @@ class Command(Item):
             # For an internal command...
             self.module_type = u'internal'
 
-    def __repr__(self):  # pragma: no cover
-        return '<%r %r, command line: %r/>' % \
-               (self.__class__.__name__, self.get_name(), getattr(self, 'command_line', 'Unset'))
-    __str__ = __repr__
+    def __str__(self):  # pragma: no cover
+        return '<Command %s, command line: %s/>' % \
+               (self.get_name(), getattr(self, 'command_line', 'Unset'))
+    __repr__ = __str__
 
     def fill_data_brok_from(self, data, brok_type):
         """
@@ -141,30 +141,27 @@ class Command(Item):
             parameters = self.command_line.split(';')
             if len(parameters) < 2:
                 self.command_name = "_internal_host_check;0;Host assumed to be UP"
-                self.add_warning("[%s::%s] has no defined state nor output. Changed to %s"
-                                 % (self.my_type, self.command_name, self.command_name))
+                self.add_warning("has no defined state nor output. Changed to %s"
+                                 % self.command_name)
             elif len(parameters) < 3:
                 state = 3
                 try:
                     state = int(parameters[1])
                 except ValueError:
-                    self.add_warning("[%s::%s] required a non integer state: %s. Using 3."
-                                     % (self.my_type, self.command_name, parameters[1]))
+                    self.add_warning("required a non integer state: %s. Using 3."
+                                     % parameters[1])
 
                 if state > 4:
-                    self.add_warning("[%s::%s] required an impossible state: %d. Using 3."
-                                     % (self.my_type, self.command_name, state))
+                    self.add_warning("required an impossible state: %d. Using 3." % state)
 
                 output = {0: "UP", 1: "DOWN", 2: "DOWN", 3: "UNKNOWN", 4: "UNREACHABLE", }[state]
                 self.command_name = "_internal_host_check;Host assumed to be %s" % output
 
-                self.add_warning("[%s::%s] has no defined output. Changed to %s"
-                                 % (self.my_type, self.command_name, self.command_name))
+                self.add_warning("has no defined output. Changed to %s" % self.command_name)
             elif len(parameters) > 3:
                 self.command_name = "%s;%s;%s" % (parameters[0], parameters[1], parameters[2])
 
-                self.add_warning("[%s::%s] has too many parameters. Changed to %s"
-                                 % (self.my_type, self.command_name, self.command_name))
+                self.add_warning("has too many parameters. Changed to %s" % self.command_name)
 
         return super(Command, self).is_correct() and state
 

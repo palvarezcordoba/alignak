@@ -239,8 +239,8 @@ class Service(SchedulingItem):
     })
 
     def __str__(self):  # pragma: no cover
-        return '<Service %s %s, uuid=%s, %s (%s), use: %s />' \
-               % ('template' if self.is_a_template() else '', self.get_full_name(), self.uuid,
+        return '<Service%s %s, uuid=%s, %s (%s), use: %s />' \
+               % (' template' if self.is_a_template() else '', self.get_full_name(), self.uuid,
                   self.state, self.state_type, getattr(self, 'use', None))
     __repr__ = __str__
 
@@ -434,11 +434,9 @@ class Service(SchedulingItem):
             self.add_error("a %s has been defined without host_name nor "
                            "hostgroup_name, from: %s" % (self.my_type, self.imported_from))
         elif not hname:
-            self.add_error("[%s::%s] not bound to any host."
-                           % (self.my_type, self.get_name()))
+            self.add_error("not bound to any host.")
         elif self.host is None:
-            self.add_error("[%s::%s] unknown host_name '%s'"
-                           % (self.my_type, self.get_name(), self.host_name))
+            self.add_error("unknown host_name '%s'" % self.host_name)
 
         # Set display_name if needed
         if not getattr(self, 'display_name', ''):
@@ -448,8 +446,7 @@ class Service(SchedulingItem):
             if char not in self.service_description:
                 continue
 
-            self.add_error("[%s::%s] service_description got an illegal character: %s"
-                           % (self.my_type, self.get_name(), char))
+            self.add_error("service_description got an illegal character: %s" % char)
 
         return super(Service, self).is_correct() and state
 
@@ -1305,7 +1302,7 @@ class Services(SchedulingItems):
     """Class for the services lists. It's mainly for configuration
 
     """
-    inner_class = Service  # use for know what is in items
+    inner_class = Service
 
     def add_template(self, template):
         """
@@ -1453,22 +1450,22 @@ class Services(SchedulingItems):
                 # Checks service override syntax
                 match = ovr_re.search(ovr)
                 if match is None:
-                    host.add_error("Error: invalid service override syntax: %s" % ovr)
+                    host.add_error("invalid service override syntax: %s" % ovr)
                     continue
                 sdescr, prop, value = match.groups()
                 # Looks for corresponding service
-                print("Override %s: %s / %s / %s" % (host, sdescr, prop, value))
+                # print("Override %s: %s / %s / %s" % (host, sdescr, prop, value))
                 service = self.find_srv_by_name_and_hostname(getattr(host, "host_name", ""), sdescr)
                 if service is None:
-                    host.add_error("Error: trying to override property '%s' on service '%s' "
+                    host.add_error("trying to override property '%s' on service '%s' "
                                    "but it's unknown for this host" % (prop, sdescr))
                     continue
                 # Checks if override is allowed
                 excludes = ['host_name', 'service_description', 'use', 'servicegroups',
                             'trigger_name']
                 if prop in excludes:
-                    host.add_error("Error: trying to override '%s', "
-                                   "a forbidden property for service '%s'" % (prop, sdescr))
+                    host.add_error("trying to override '%s', a forbidden property "
+                                   "for service '%s'" % (prop, sdescr))
                     continue
 
                 # Pythonize the value because here value is str.

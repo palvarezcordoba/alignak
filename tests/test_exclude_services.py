@@ -90,10 +90,11 @@ class TestExcludeServices(AlignakTest):
     def test_service_includes(self):
         """
         Test service_includes statement in host
-        """ 
+        """
 
         find = self._arbiter.conf.services.find_srv_by_name_and_hostname
         find = partial(find, 'test_host_03')
+        print("Found: %s / %s" % (find, find.__dict__))
 
         for svc in ('srv-svc11', 'proc proc2', 'srv-svc22'):
             assert find(svc) is not None, "%s not found" % svc

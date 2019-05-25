@@ -68,6 +68,8 @@ class Servicedependency(Item):
 
     """
     my_type = "servicedependency"
+    my_name_property = "service_relation"
+    my_index_property = "service_relation"
 
     properties = Item.properties.copy()
     properties.update({
@@ -95,17 +97,37 @@ class Servicedependency(Item):
             BoolProp(default=False)
     })
 
-    def get_name(self, index=False):
+    def __str__(self):  # pragma: no cover
+        return '<Servicedependency %s %s, uuid=%s, use: %s />' \
+               % ('template' if self.is_a_template() else '', self.get_full_name(), self.uuid,
+                  getattr(self, 'use', None))
+    __repr__ = __str__
+
+    @property
+    def service_relation(self):
+        """Unique key for a service dependency
+
+        :return: Tuple with host_name/service and dependent_host_name/service
+        :rtype: tuple
+        """
+        return "{}/{}->{}/{}".format(getattr(self, 'host_name', 'unknown'),
+                                     getattr(self, 'service_description', 'unknown'),
+                                     getattr(self, 'dependent_host_name', 'independant'),
+                                     getattr(self, 'dependent_service_description', 'unknown'))
+
+    def get_full_name(self, index=False):
         """Get name based on 4 class attributes
         Each attribute is replaced with 'unknown' if attribute is not set
 
         :return: dependent_host_name/dependent_service_description..host_name/service_description
         :rtype: str
         """
-        return "{}/{}->{}/{}".format(getattr(self, 'dependent_host_name', 'unknown'),
-                                     getattr(self, 'dependent_service_description', 'unknown'),
-                                     getattr(self, 'host_name', 'unknown'),
-                                     getattr(self, 'service_description', 'unknown'))
+        if self.is_a_template():
+            return self.get_name()
+        return "{}/{}->{}/{}".format(getattr(self, 'host_name', 'unknown'),
+                                     getattr(self, 'service_description', 'unknown'),
+                                     getattr(self, 'dependent_host_name', 'independant'),
+                                     getattr(self, 'dependent_service_description', 'unknown'))
 
 
 class Servicedependencies(Items):
@@ -113,7 +135,7 @@ class Servicedependencies(Items):
        used for parsing configuration
 
     """
-    inner_class = Servicedependency  # use for know what is in items
+    inner_class = Servicedependency
 
     def delete_svc_dep_by_id(self, ids):
         """Delete a list of servicedependency
@@ -151,7 +173,7 @@ class Servicedependencies(Items):
             'notification_failure_criteria': 'u,c,w',
             'inherits_parent': '1'
         }
-        print("Add a service dep: %s" % (params))
+        # print("Add a service dep: %s" % (params))
         self.add_item(Servicedependency(params))
 
     def explode_hostgroup(self, svc_dep, hostgroups):
@@ -202,7 +224,7 @@ class Servicedependencies(Items):
         :type hostgroups: alignak.objects.hostgroup.Hostgroups
         :return: None
         """
-        print("SvcDep explode")
+        # print("SvcDep explode")
 
         # The "old" services will be removed. All services with
         # more than one host or a host group will be in it
@@ -213,7 +235,7 @@ class Servicedependencies(Items):
         for svc_dep_id in list(self.items.keys()):
             svc_dep = self.items[svc_dep_id]
 
-            print("Service dep: %s" % svc_dep)
+            # print("Service dep: %s" % svc_dep)
             # from pprint import pprint
             # pprint(svc_dep.__dict__)
 
@@ -242,12 +264,12 @@ class Servicedependencies(Items):
                                             "hostgroup_name '%s'" % hg_name)
                         continue
                     father_hosts.extend([m.strip() for m in hostgroup.get_hosts()])
-            print("- father hosts: %s" % (father_hosts))
+            # print("- father hosts: %s" % (father_hosts))
 
             services = []
             if getattr(svc_dep, 'service_description', ''):
                 services = [s.strip() for s in svc_dep.service_description.split(',')]
-            print("- services desc: %s" % father_hosts)
+            # print("- services desc: %s" % father_hosts)
 
             couples = []
             for host_name in father_hosts:
@@ -274,7 +296,7 @@ class Servicedependencies(Items):
                 svc_dep.dependent_host_name = getattr(svc_dep, 'host_name', '')
             if getattr(svc_dep, 'dependent_host_name', ''):
                 son_hosts.extend([h.strip() for h in svc_dep.dependent_host_name.split(',')])
-            print("- son hosts: %s" % son_hosts)
+            # print("- son hosts: %s" % son_hosts)
 
             dep_snames = [h.strip() for h in svc_dep.dependent_service_description.split(',')]
             dep_couples = []
@@ -291,7 +313,7 @@ class Servicedependencies(Items):
                     new_sd.dependent_host_name = dep_hname
                     new_sd.dependent_service_description = dep_sname
                     self.add_item(new_sd)
-                    print("-> new SD: %s" % new_sd)
+                    # print("-> new SD: %s" % new_sd)
                 # Ok so we can remove the old one
                 to_be_removed.append(svc_dep_id)
 
@@ -312,8 +334,6 @@ class Servicedependencies(Items):
         :type timeperiods: alignak.objects.timeperiod.Timeperiods
         :return: None
         """
-        print("linkify")
-
         self.linkify_svc_dep_by_service(hosts, services)
         self.linkify_svc_dep_by_timeperiod(timeperiods)
         self.linkify_service_by_svc_dep(services)
@@ -433,7 +453,6 @@ class Servicedependencies(Items):
         :rtype: bool
         """
         state = True
-        print("SD is correct ?")
 
         # Internal checks before executing inherited function...
         loop = self.no_loop_in_parents("service_description", "dependent_service_description")

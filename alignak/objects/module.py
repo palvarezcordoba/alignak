@@ -179,11 +179,11 @@ class Module(Item):
         #     if getattr(self, prop, None):
         #         delattr(self, prop)
 
-    def __repr__(self):  # pragma: no cover
-        return '<%r %r, module: %r, type(s): %r />' % \
-               (self.__class__.__name__, self.name, getattr(self, 'python_name', 'Unknown'),
+    def __str__(self):  # pragma: no cover
+        return '<Module %s, module: %s, type(s): %s />' % \
+               (self.get_name(), getattr(self, 'python_name', 'Unknown'),
                 getattr(self, 'type', 'Unknown'))
-    __str__ = __repr__
+    __repr__ = __str__
 
     def get_types(self):
         """

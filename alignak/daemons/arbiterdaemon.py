@@ -707,9 +707,6 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
         # from the legacy configuration files and extra modules.
         logger.info("Preparing configuration...")
 
-        # for host in self.conf.hosts:
-        #     print("Host before linkify: %d / %s\n" % (host.max_check_attempts, host))
-
         # Create Template links
         self.conf.linkify_templates()
 

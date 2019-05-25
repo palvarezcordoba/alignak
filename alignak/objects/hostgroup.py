@@ -337,12 +337,11 @@ class Hostgroups(Itemgroups):
                                 else:
                                     # It still exists a candidate realm for the hostgroup,
                                     # raise an error !
-                                    hostgroup.add_error("hostgroup %s got the default realm but "
-                                                        "it has some hosts that are from different "
-                                                        "realms: %s and %s. The defined realm "
+                                    hostgroup.add_error("got the default realm but it has some "
+                                                        "hosts that are from different realms: "
+                                                        "%s and %s. The defined realm "
                                                         "cannot be adjusted!"
-                                                        % (hostgroup.get_name(),
-                                                           hostgroup_new_realm_name,
+                                                        % (hostgroup_new_realm_name,
                                                            host_realm_name))
                                     hostgroup_new_realm_failed = True
                                     break
