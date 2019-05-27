@@ -71,6 +71,7 @@ import os
 import time
 import logging
 
+from alignak.backend.datamanager import DataManager
 from alignak.objects.schedulingitem import SchedulingItem, SchedulingItems
 
 from alignak.autoslots import AutoSlots
@@ -1306,6 +1307,9 @@ class Hosts(SchedulingItems):
     """
     name_property = "host_name"
     inner_class = Host
+
+    def find_by_name(self, name):
+        return DataManager().get_host(name)
 
     # pylint: disable=too-many-arguments
     def linkify(self, timeperiods=None, commands=None, contacts=None,
