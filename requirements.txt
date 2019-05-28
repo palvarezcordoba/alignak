@@ -54,3 +54,5 @@ docopt
 # Uncomment or `pip install psutil` to enable the concerned features
 # Note that psutil requires to be compiled: sudo apt-get install gcc python3-dev
 psutil>=5.4.3,<=5.4.5
+alignak_backend_client
+alignak-webui
